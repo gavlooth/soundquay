@@ -1,0 +1,145 @@
+2026/01/21 11:57:34 [BUILD] Creating volume slider with value=50%
+2026/01/21 11:57:34 [BUILD] Creating mic slider with value=50%
+2026/01/21 11:57:34 [STARTUP] Window size: {380 600}
+2026/01/21 11:57:34 [STARTUP] Root container size: {364 788.1719}
+2026/01/21 11:57:34 [STARTUP] Root min size: {254.76562 788.1719}
+2026/01/21 11:57:34 [FETCHER] Started
+2026/01/21 11:57:34 [COORDINATOR] Started
+2026/01/21 11:57:36 [FETCHER] Timer trigger
+2026/01/21 11:57:36 [FETCHER] getStatus() took 98.899856ms
+2026/01/21 11:57:36 [DISPATCH] → RefreshStatus
+2026/01/21 11:57:36 [DISPATCH] ✓ RefreshStatus queued
+2026/01/21 11:57:36 [COORDINATOR] ← Received RefreshStatus
+2026/01/21 11:57:36 [STATUS] BEFORE: Vol=50% Muted=false MicVol=50% MicMuted=false
+2026/01/21 11:57:36 [STATUS] AFTER:  Vol=50% Muted=false MicVol=50% MicMuted=false
+2026/01/21 11:57:36 [REFRESH] Starting...
+2026/01/21 11:57:36 [REFRESH] Volume slider: 50% (unchanged)
+2026/01/21 11:57:36 [REFRESH] Mic slider: 50% (unchanged)
+2026/01/21 11:57:36 [REFRESH] ✓ Complete in 347.041µs
+2026/01/21 11:57:36 [COORDINATOR] ✓ Handled RefreshStatus in 357.94µs
+2026/01/21 11:57:37 [SLIDER] Main volume: status=50% -> slider=75%
+2026/01/21 11:57:38 [FETCHER] Timer trigger
+2026/01/21 11:57:38 [FETCHER] getStatus() took 88.671207ms
+2026/01/21 11:57:38 [DISPATCH] → RefreshStatus
+2026/01/21 11:57:38 [DISPATCH] ✓ RefreshStatus queued
+2026/01/21 11:57:38 [COORDINATOR] ← Received RefreshStatus
+2026/01/21 11:57:38 [STATUS] BEFORE: Vol=50% Muted=false MicVol=50% MicMuted=false
+2026/01/21 11:57:38 [STATUS] AFTER:  Vol=50% Muted=false MicVol=50% MicMuted=false
+2026/01/21 11:57:38 [REFRESH] Starting...
+2026/01/21 11:57:38 [REFRESH] Volume slider: 75% (skipped - user changed 950ms ago)
+2026/01/21 11:57:38 [REFRESH] Mic slider: 50% (unchanged)
+2026/01/21 11:57:38 [REFRESH] ✓ Complete in 62.532µs
+2026/01/21 11:57:38 [COORDINATOR] ✓ Handled RefreshStatus in 76.776µs
+2026/01/21 11:57:40 [FETCHER] Timer trigger
+2026/01/21 11:57:40 [FETCHER] getStatus() took 85.073782ms
+2026/01/21 11:57:40 [DISPATCH] → RefreshStatus
+2026/01/21 11:57:40 [DISPATCH] ✓ RefreshStatus queued
+2026/01/21 11:57:40 [COORDINATOR] ← Received RefreshStatus
+2026/01/21 11:57:40 [STATUS] BEFORE: Vol=50% Muted=false MicVol=50% MicMuted=false
+2026/01/21 11:57:40 [STATUS] AFTER:  Vol=50% Muted=false MicVol=50% MicMuted=false
+2026/01/21 11:57:40 [REFRESH] Starting...
+2026/01/21 11:57:40 [REFRESH] Volume slider: 75% (skipped - user changed 2.946s ago)
+2026/01/21 11:57:40 [REFRESH] Mic slider: 50% (unchanged)
+2026/01/21 11:57:40 [REFRESH] ✓ Complete in 65.785µs
+2026/01/21 11:57:40 [COORDINATOR] ✓ Handled RefreshStatus in 79.664µs
+2026/01/21 11:57:42 [FETCHER] Timer trigger
+2026/01/21 11:57:42 [FETCHER] getStatus() took 86.814474ms
+2026/01/21 11:57:42 [DISPATCH] → RefreshStatus
+2026/01/21 11:57:42 [DISPATCH] ✓ RefreshStatus queued
+2026/01/21 11:57:42 [COORDINATOR] ← Received RefreshStatus
+2026/01/21 11:57:42 [STATUS] BEFORE: Vol=50% Muted=false MicVol=50% MicMuted=false
+2026/01/21 11:57:42 [STATUS] AFTER:  Vol=50% Muted=false MicVol=50% MicMuted=false
+2026/01/21 11:57:42 [REFRESH] Starting...
+2026/01/21 11:57:42 [REFRESH] Volume slider: 75% -> 50% (updating)
+2026/01/21 11:57:42 [SLIDER] Main volume: status=50% -> slider=50%
+2026/01/21 11:57:42 [REFRESH] Mic slider: 50% (unchanged)
+2026/01/21 11:57:42 [REFRESH] ✓ Complete in 218.665µs
+2026/01/21 11:57:42 [COORDINATOR] ✓ Handled RefreshStatus in 235.512µs
+2026/01/21 11:57:44 [FETCHER] Timer trigger
+2026/01/21 11:57:44 [FETCHER] getStatus() took 93.612261ms
+2026/01/21 11:57:44 [DISPATCH] → RefreshStatus
+2026/01/21 11:57:44 [DISPATCH] ✓ RefreshStatus queued
+2026/01/21 11:57:44 [COORDINATOR] ← Received RefreshStatus
+2026/01/21 11:57:44 [STATUS] BEFORE: Vol=50% Muted=false MicVol=50% MicMuted=false
+2026/01/21 11:57:44 [STATUS] AFTER:  Vol=50% Muted=false MicVol=50% MicMuted=false
+2026/01/21 11:57:44 [REFRESH] Starting...
+2026/01/21 11:57:44 [REFRESH] Volume slider: 50% (skipped - user changed 2.007s ago)
+2026/01/21 11:57:44 [REFRESH] Mic slider: 50% (unchanged)
+2026/01/21 11:57:44 [REFRESH] ✓ Complete in 60.862µs
+2026/01/21 11:57:44 [COORDINATOR] ✓ Handled RefreshStatus in 80.997µs
+2026/01/21 11:57:46 [FETCHER] Timer trigger
+2026/01/21 11:57:46 [FETCHER] getStatus() took 93.901741ms
+2026/01/21 11:57:46 [DISPATCH] → RefreshStatus
+2026/01/21 11:57:46 [DISPATCH] ✓ RefreshStatus queued
+2026/01/21 11:57:46 [COORDINATOR] ← Received RefreshStatus
+2026/01/21 11:57:46 [STATUS] BEFORE: Vol=50% Muted=false MicVol=50% MicMuted=false
+2026/01/21 11:57:46 [STATUS] AFTER:  Vol=50% Muted=false MicVol=50% MicMuted=false
+2026/01/21 11:57:46 [REFRESH] Starting...
+2026/01/21 11:57:46 [REFRESH] Volume slider: 50% (unchanged)
+2026/01/21 11:57:46 [REFRESH] Mic slider: 50% (unchanged)
+2026/01/21 11:57:46 [REFRESH] ✓ Complete in 53.583µs
+2026/01/21 11:57:46 [COORDINATOR] ✓ Handled RefreshStatus in 62.687µs
+2026/01/21 11:57:47 [SLIDER] Main volume: status=50% -> slider=25%
+2026/01/21 11:57:48 [FETCHER] Timer trigger
+2026/01/21 11:57:48 [FETCHER] getStatus() took 81.143615ms
+2026/01/21 11:57:48 [DISPATCH] → RefreshStatus
+2026/01/21 11:57:48 [DISPATCH] ✓ RefreshStatus queued
+2026/01/21 11:57:48 [COORDINATOR] ← Received RefreshStatus
+2026/01/21 11:57:48 [STATUS] BEFORE: Vol=50% Muted=false MicVol=50% MicMuted=false
+2026/01/21 11:57:48 [STATUS] AFTER:  Vol=50% Muted=false MicVol=50% MicMuted=false
+2026/01/21 11:57:48 [REFRESH] Starting...
+2026/01/21 11:57:48 [REFRESH] Volume slider: 25% (skipped - user changed 1.11s ago)
+2026/01/21 11:57:48 [REFRESH] Mic slider: 50% (unchanged)
+2026/01/21 11:57:48 [REFRESH] ✓ Complete in 56.312µs
+2026/01/21 11:57:48 [COORDINATOR] ✓ Handled RefreshStatus in 65.933µs
+2026/01/21 11:57:50 [FETCHER] Timer trigger
+2026/01/21 11:57:50 [FETCHER] getStatus() took 82.464433ms
+2026/01/21 11:57:50 [DISPATCH] → RefreshStatus
+2026/01/21 11:57:50 [DISPATCH] ✓ RefreshStatus queued
+2026/01/21 11:57:50 [COORDINATOR] ← Received RefreshStatus
+2026/01/21 11:57:50 [STATUS] BEFORE: Vol=50% Muted=false MicVol=50% MicMuted=false
+2026/01/21 11:57:50 [STATUS] AFTER:  Vol=50% Muted=false MicVol=50% MicMuted=false
+2026/01/21 11:57:50 [REFRESH] Starting...
+2026/01/21 11:57:50 [REFRESH] Volume slider: 25% -> 50% (updating)
+2026/01/21 11:57:50 [SLIDER] Main volume: status=50% -> slider=50%
+2026/01/21 11:57:50 [REFRESH] Mic slider: 50% (unchanged)
+2026/01/21 11:57:50 [REFRESH] ✓ Complete in 272.604µs
+2026/01/21 11:57:50 [COORDINATOR] ✓ Handled RefreshStatus in 284.966µs
+2026/01/21 11:57:52 [SLIDER] Main volume: status=50% -> slider=95%
+2026/01/21 11:57:52 [FETCHER] Timer trigger
+2026/01/21 11:57:52 [FETCHER] getStatus() took 81.175698ms
+2026/01/21 11:57:52 [DISPATCH] → RefreshStatus
+2026/01/21 11:57:52 [DISPATCH] ✓ RefreshStatus queued
+2026/01/21 11:57:52 [COORDINATOR] ← Received RefreshStatus
+2026/01/21 11:57:52 [STATUS] BEFORE: Vol=50% Muted=false MicVol=50% MicMuted=false
+2026/01/21 11:57:52 [STATUS] AFTER:  Vol=50% Muted=false MicVol=50% MicMuted=false
+2026/01/21 11:57:52 [REFRESH] Starting...
+2026/01/21 11:57:52 [REFRESH] Volume slider: 95% (skipped - user changed 694ms ago)
+2026/01/21 11:57:52 [REFRESH] Mic slider: 50% (unchanged)
+2026/01/21 11:57:52 [REFRESH] ✓ Complete in 57.854µs
+2026/01/21 11:57:52 [COORDINATOR] ✓ Handled RefreshStatus in 62.737µs
+2026/01/21 11:57:54 [FETCHER] Timer trigger
+2026/01/21 11:57:54 [FETCHER] getStatus() took 90.797891ms
+2026/01/21 11:57:54 [DISPATCH] → RefreshStatus
+2026/01/21 11:57:54 [DISPATCH] ✓ RefreshStatus queued
+2026/01/21 11:57:54 [COORDINATOR] ← Received RefreshStatus
+2026/01/21 11:57:54 [STATUS] BEFORE: Vol=50% Muted=false MicVol=50% MicMuted=false
+2026/01/21 11:57:54 [STATUS] AFTER:  Vol=50% Muted=false MicVol=50% MicMuted=false
+2026/01/21 11:57:54 [REFRESH] Starting...
+2026/01/21 11:57:54 [REFRESH] Volume slider: 95% (skipped - user changed 2.704s ago)
+2026/01/21 11:57:54 [REFRESH] Mic slider: 50% (unchanged)
+2026/01/21 11:57:54 [REFRESH] ✓ Complete in 58.563µs
+2026/01/21 11:57:54 [COORDINATOR] ✓ Handled RefreshStatus in 67.479µs
+2026/01/21 11:57:56 [FETCHER] Timer trigger
+2026/01/21 11:57:56 [FETCHER] getStatus() took 77.830722ms
+2026/01/21 11:57:56 [DISPATCH] → RefreshStatus
+2026/01/21 11:57:56 [DISPATCH] ✓ RefreshStatus queued
+2026/01/21 11:57:56 [COORDINATOR] ← Received RefreshStatus
+2026/01/21 11:57:56 [STATUS] BEFORE: Vol=50% Muted=false MicVol=50% MicMuted=false
+2026/01/21 11:57:56 [STATUS] AFTER:  Vol=50% Muted=false MicVol=50% MicMuted=false
+2026/01/21 11:57:56 [REFRESH] Starting...
+2026/01/21 11:57:56 [REFRESH] Volume slider: 95% -> 50% (updating)
+2026/01/21 11:57:56 [SLIDER] Main volume: status=50% -> slider=50%
+2026/01/21 11:57:56 [REFRESH] Mic slider: 50% (unchanged)
+2026/01/21 11:57:56 [REFRESH] ✓ Complete in 216.282µs
+2026/01/21 11:57:56 [COORDINATOR] ✓ Handled RefreshStatus in 227.606µs

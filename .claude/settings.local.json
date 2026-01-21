@@ -10,7 +10,9 @@
       "mcp__memory__open_nodes",
       "mcp__memory__delete_entities",
       "Bash(echo:*)",
-      "Bash([[ \":$PATH:\" == *\":$HOME/.local/bin:\"* ]])"
+      "Bash([[ \":$PATH:\" == *\":$HOME/.local/bin:\"* ]])",
+      "Bash(/usr/bin/cp -f audio-indicator ~/.local/bin/)",
+      "Bash(/usr/bin/cp:*)"
     ]
   }
 }

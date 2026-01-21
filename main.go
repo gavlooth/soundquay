@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -52,12 +53,23 @@ type MoveSinkInputData struct {
 }
 
 type AudioApp struct {
-	window     fyne.Window
-	status     *AudioStatus
-	expanded   map[string]bool
-	root       *fyne.Container
-	scroll     *container.Scroll // Persistent scroll container
-	actionChan chan ActionMsg    // Single channel for all actions
+	window      fyne.Window
+	status      *AudioStatus
+	expanded    map[string]bool
+	root        *fyne.Container
+	scroll      *container.Scroll // Persistent scroll container
+	actionChan  chan ActionMsg    // Single channel for all actions
+	triggerFetch chan struct{}    // Signal to fetch status (alts! pattern)
+
+	// Persistent widget references - don't recreate on refresh
+	volumeSlider    *widget.Slider
+	volumeLabel     *widget.Label
+	micVolumeSlider *widget.Slider
+	micVolumeLabel  *widget.Label
+
+	// Track last user interaction to avoid overwriting pending changes
+	lastVolumeChange    time.Time
+	lastMicVolumeChange time.Time
 }
 
 // Dispatch sends an action to the coordinator goroutine
@@ -71,16 +83,31 @@ func (a *AudioApp) Dispatch(action Action, data interface{}) {
 	}
 }
 
+// RequestFetch signals the fetcher to refresh status (non-blocking)
+func (a *AudioApp) RequestFetch() {
+	select {
+	case a.triggerFetch <- struct{}{}:
+		log.Println("[FETCH] Requested")
+	default:
+		log.Println("[FETCH] Already pending (coalesced)")
+	}
+}
+
 func main() {
+	// CLI flags
+	title := flag.String("title", "Audio Indicator", "Window title")
+	flag.Parse()
+
 	fyneApp := app.New()
 	fyneApp.Settings().SetTheme(&DarkTheme{})
 
 	appInstance := &AudioApp{
-		expanded:   make(map[string]bool),
-		actionChan: make(chan ActionMsg, 100), // Buffered like your Clojure main-action-channel
+		expanded:     make(map[string]bool),
+		actionChan:   make(chan ActionMsg, 100), // Buffered like your Clojure main-action-channel
+		triggerFetch: make(chan struct{}, 1),    // Buffered 1 for non-blocking signal
 	}
 
-	appInstance.window = fyneApp.NewWindow("Audio Indicator")
+	appInstance.window = fyneApp.NewWindow(*title)
 	appInstance.window.Resize(fyne.NewSize(380, 600))
 
 	// Initial status load (blocking, but only at startup)
@@ -91,30 +118,42 @@ func main() {
 	appInstance.scroll = container.NewVScroll(appInstance.root)
 	appInstance.window.SetContent(appInstance.scroll)
 
-	// Single coordinator goroutine - like your Clojure go-loop
-	// All state mutations happen here, serialized
+	// Log initial sizes for debugging layout
+	log.Printf("[STARTUP] Window size: %v", appInstance.window.Canvas().Size())
+	log.Printf("[STARTUP] Root container size: %v", appInstance.root.Size())
+	log.Printf("[STARTUP] Root min size: %v", appInstance.root.MinSize())
+
+	// Fetcher goroutine - alts! pattern: responds to BOTH timer AND manual triggers
+	// Single source of truth for status fetching, coalesces rapid requests
 	go func() {
-		log.Println("[COORDINATOR] Started")
+		log.Println("[FETCHER] Started")
 		ticker := time.NewTicker(2 * time.Second)
 		defer ticker.Stop()
 
 		for {
 			select {
-			case action := <-appInstance.actionChan:
-				log.Printf("[COORDINATOR] ← Received %s", action.Action)
-				start := time.Now()
-				appInstance.handleAction(action)
-				log.Printf("[COORDINATOR] ✓ Handled %s in %v", action.Action, time.Since(start))
-
+			case <-appInstance.triggerFetch:
+				log.Println("[FETCHER] Manual trigger")
 			case <-ticker.C:
-				log.Println("[TICKER] Polling status...")
-				go func() {
-					start := time.Now()
-					getStatus()
-					log.Printf("[TICKER] getStatus() took %v", time.Since(start))
-					appInstance.Dispatch(ActionRefreshStatus, nil)
-				}()
+				log.Println("[FETCHER] Timer trigger")
 			}
+
+			// Coalesced fetch - only ONE getStatus regardless of trigger source
+			start := time.Now()
+			getStatus()
+			log.Printf("[FETCHER] getStatus() took %v", time.Since(start))
+			appInstance.Dispatch(ActionRefreshStatus, nil)
+		}
+	}()
+
+	// Coordinator goroutine - handles actions, no polling here
+	go func() {
+		log.Println("[COORDINATOR] Started")
+		for action := range appInstance.actionChan {
+			log.Printf("[COORDINATOR] ← Received %s", action.Action)
+			start := time.Now()
+			appInstance.handleAction(action)
+			log.Printf("[COORDINATOR] ✓ Handled %s in %v", action.Action, time.Since(start))
 		}
 	}()
 
@@ -125,7 +164,17 @@ func main() {
 func (a *AudioApp) handleAction(msg ActionMsg) {
 	switch msg.Action {
 	case ActionRefreshStatus:
+		oldStatus := a.status
 		a.status = GetCurrentStatus()
+
+		// Log before/after percentages for debugging reset issue
+		if oldStatus != nil {
+			log.Printf("[STATUS] BEFORE: Vol=%d%% Muted=%v MicVol=%d%% MicMuted=%v",
+				oldStatus.Volume, oldStatus.Muted, oldStatus.MicVolume, oldStatus.MicMuted)
+		}
+		log.Printf("[STATUS] AFTER:  Vol=%d%% Muted=%v MicVol=%d%% MicMuted=%v",
+			a.status.Volume, a.status.Muted, a.status.MicVolume, a.status.MicMuted)
+
 		a.refreshUI()
 
 	case ActionToggleExpand:
@@ -144,14 +193,13 @@ func (a *AudioApp) handleAction(msg ActionMsg) {
 			}
 			a.refreshUI() // Immediate feedback
 
-			// Sync with actual state in background
+			// Do I/O in background, then signal fetcher (not getStatus directly)
 			go func() {
 				log.Println("[IO] setSink starting...")
 				start := time.Now()
 				setSink(data.SinkName)
 				log.Printf("[IO] setSink took %v", time.Since(start))
-				getStatus()
-				a.Dispatch(ActionRefreshStatus, nil)
+				a.RequestFetch() // Signal fetcher instead of direct getStatus
 			}()
 		}
 
@@ -165,8 +213,7 @@ func (a *AudioApp) handleAction(msg ActionMsg) {
 
 			go func() {
 				setSource(data.SourceName)
-				getStatus()
-				a.Dispatch(ActionRefreshStatus, nil)
+				a.RequestFetch() // Signal fetcher
 			}()
 		}
 
@@ -184,8 +231,7 @@ func (a *AudioApp) handleAction(msg ActionMsg) {
 
 			go func() {
 				moveSinkInput(data.StreamID, data.SinkName)
-				getStatus()
-				a.Dispatch(ActionRefreshStatus, nil)
+				a.RequestFetch() // Signal fetcher
 			}()
 		}
 	}
@@ -195,20 +241,52 @@ func (a *AudioApp) refreshUI() {
 	start := time.Now()
 	log.Println("[REFRESH] Starting...")
 
-	// Save scroll position
-	scrollOffset := a.scroll.Offset
+	// ALL UI operations must be on main Fyne thread - use DoAndWait to block until complete
+	gracePeriod := 3 * time.Second // Don't overwrite user changes for 3 seconds
 
-	// Update content
-	buildStart := time.Now()
-	newRoot := a.makeAudioPopup()
-	log.Printf("[REFRESH] makeAudioPopup took %v", time.Since(buildStart))
+	fyne.DoAndWait(func() {
+		// Update existing sliders instead of rebuilding entire UI
+		if a.volumeSlider != nil {
+			currentSliderVal := int(a.volumeSlider.Value)
+			timeSinceChange := time.Since(a.lastVolumeChange)
+			if timeSinceChange < gracePeriod {
+				log.Printf("[REFRESH] Volume slider: %d%% (skipped - user changed %v ago)", currentSliderVal, timeSinceChange.Round(time.Millisecond))
+			} else if currentSliderVal != a.status.Volume {
+				log.Printf("[REFRESH] Volume slider: %d%% -> %d%% (updating)", currentSliderVal, a.status.Volume)
+				a.volumeSlider.SetValue(float64(a.status.Volume))
+				a.volumeLabel.SetText(fmt.Sprintf("%d%%", a.status.Volume))
+			} else {
+				log.Printf("[REFRESH] Volume slider: %d%% (unchanged)", currentSliderVal)
+			}
+		}
 
-	a.root.Objects = newRoot.Objects
-	a.root.Refresh()
+		if a.micVolumeSlider != nil {
+			currentSliderVal := int(a.micVolumeSlider.Value)
+			timeSinceChange := time.Since(a.lastMicVolumeChange)
+			if timeSinceChange < gracePeriod {
+				log.Printf("[REFRESH] Mic slider: %d%% (skipped - user changed %v ago)", currentSliderVal, timeSinceChange.Round(time.Millisecond))
+			} else if currentSliderVal != a.status.MicVolume {
+				log.Printf("[REFRESH] Mic slider: %d%% -> %d%% (updating)", currentSliderVal, a.status.MicVolume)
+				a.micVolumeSlider.SetValue(float64(a.status.MicVolume))
+				a.micVolumeLabel.SetText(fmt.Sprintf("%d%%", a.status.MicVolume))
+			} else {
+				log.Printf("[REFRESH] Mic slider: %d%% (unchanged)", currentSliderVal)
+			}
+		}
 
-	// Restore scroll position after refresh
-	a.scroll.Offset = scrollOffset
-	a.scroll.Refresh()
+		// Only rebuild full UI if widgets don't exist yet
+		if a.volumeSlider == nil {
+			scrollOffset := a.scroll.Offset
+			buildStart := time.Now()
+			newRoot := a.makeAudioPopup()
+			log.Printf("[REFRESH] makeAudioPopup took %v", time.Since(buildStart))
+
+			a.root.Objects = newRoot.Objects
+			a.root.Refresh()
+			a.scroll.Offset = scrollOffset
+			a.scroll.Refresh()
+		}
+	})
 
 	log.Printf("[REFRESH] ✓ Complete in %v", time.Since(start))
 }
@@ -218,21 +296,27 @@ func (a *AudioApp) makeAudioPopup() *fyne.Container {
 		a.makeHeader(),
 		widget.NewSeparator(),
 		a.makeMainVolume(),
+		widget.NewSeparator(),
 		a.makeOutputDevices(),
+		widget.NewSeparator(),
 		a.makeMicrophoneSection(),
+		widget.NewSeparator(),
 		a.makeInputDevices(),
+		widget.NewSeparator(),
 		a.makeApplicationsPlaying(),
+		widget.NewSeparator(),
 		a.makeApplicationsRecording(),
 	)
 }
 
 func (a *AudioApp) makeHeader() *fyne.Container {
-	return container.NewHBox(
+	// Border layout: title on left, close button on right, spacer in center
+	return container.NewBorder(nil, nil,
 		widget.NewLabel("󰕾 Audio"),
-		container.NewGridWithColumns(1),
 		widget.NewButton("󰅖", func() {
 			a.window.Close()
 		}),
+		nil, // Empty center acts as spacer
 	)
 }
 
@@ -240,11 +324,14 @@ func (a *AudioApp) makeMainVolume() *fyne.Container {
 	label := widget.NewLabel("Volume")
 
 	volume := a.status.Volume
-	slider := widget.NewSlider(0, 100)
-	slider.SetValue(float64(volume))
-	slider.Step = 5
+	log.Printf("[BUILD] Creating volume slider with value=%d%%", volume)
 
-	volumeLabel := widget.NewLabel(fmt.Sprintf("%d%%", volume))
+	// Create and store persistent references
+	a.volumeSlider = widget.NewSlider(0, 100)
+	a.volumeSlider.SetValue(float64(volume))
+	a.volumeSlider.Step = 5
+
+	a.volumeLabel = widget.NewLabel(fmt.Sprintf("%d%%", volume))
 	isMuted := a.status.Muted
 	muteBtnState := isMuted
 
@@ -255,20 +342,21 @@ func (a *AudioApp) makeMainVolume() *fyne.Container {
 		muteBtn.SetText(getMuteIcon(muteBtnState))
 	}
 
-	slider.OnChanged = func(value float64) {
+	a.volumeSlider.OnChanged = func(value float64) {
 		vol := int(value)
-		volumeLabel.SetText(fmt.Sprintf("%d%%", vol))
-		setVolume(vol) // Already debounced in audio.go
+		log.Printf("[SLIDER] Main volume: status=%d%% -> slider=%d%%", a.status.Volume, vol)
+		a.volumeLabel.SetText(fmt.Sprintf("%d%%", vol))
+		a.lastVolumeChange = time.Now() // Mark as recently changed
+		setVolume(vol)                  // Already debounced in audio.go
 	}
 
-	return container.NewVBox(
-		label,
-		container.NewHBox(
-			slider,
-			volumeLabel,
-			muteBtn,
-		),
+	// Border layout: slider expands in center, controls on right
+	sliderRow := container.NewBorder(nil, nil, nil,
+		container.NewHBox(a.volumeLabel, muteBtn),
+		a.volumeSlider,
 	)
+
+	return container.NewVBox(label, sliderRow)
 }
 
 func (a *AudioApp) makeOutputDevices() *fyne.Container {
@@ -312,11 +400,14 @@ func (a *AudioApp) makeMicrophoneSection() *fyne.Container {
 	label := widget.NewLabel("Microphone")
 
 	volume := a.status.MicVolume
-	slider := widget.NewSlider(0, 100)
-	slider.SetValue(float64(volume))
-	slider.Step = 5
+	log.Printf("[BUILD] Creating mic slider with value=%d%%", volume)
 
-	volumeLabel := widget.NewLabel(fmt.Sprintf("%d%%", volume))
+	// Create and store persistent references
+	a.micVolumeSlider = widget.NewSlider(0, 100)
+	a.micVolumeSlider.SetValue(float64(volume))
+	a.micVolumeSlider.Step = 5
+
+	a.micVolumeLabel = widget.NewLabel(fmt.Sprintf("%d%%", volume))
 	isMuted := a.status.MicMuted
 	muteBtnState := isMuted
 
@@ -327,20 +418,21 @@ func (a *AudioApp) makeMicrophoneSection() *fyne.Container {
 		muteBtn.SetText(getMicMuteIcon(muteBtnState))
 	}
 
-	slider.OnChanged = func(value float64) {
+	a.micVolumeSlider.OnChanged = func(value float64) {
 		vol := int(value)
-		volumeLabel.SetText(fmt.Sprintf("%d%%", vol))
-		setMicVolume(vol) // Already debounced
+		log.Printf("[SLIDER] Mic volume: status=%d%% -> slider=%d%%", a.status.MicVolume, vol)
+		a.micVolumeLabel.SetText(fmt.Sprintf("%d%%", vol))
+		a.lastMicVolumeChange = time.Now() // Mark as recently changed
+		setMicVolume(vol)                  // Already debounced
 	}
 
-	return container.NewVBox(
-		label,
-		container.NewHBox(
-			slider,
-			volumeLabel,
-			muteBtn,
-		),
+	// Border layout: slider expands in center
+	sliderRow := container.NewBorder(nil, nil, nil,
+		container.NewHBox(a.micVolumeLabel, muteBtn),
+		a.micVolumeSlider,
 	)
+
+	return container.NewVBox(label, sliderRow)
 }
 
 func (a *AudioApp) makeInputDevices() *fyne.Container {
@@ -427,15 +519,14 @@ func (a *AudioApp) makeStreamItem(stream AudioStream) *fyne.Container {
 		setStreamVolume(stream.ID, vol) // Already debounced
 	}
 
-	streamContainer := container.NewVBox(
-		container.NewHBox(
-			nameLabel,
-			slider,
-			volumeLabel,
-			muteBtn,
-			sinkBtn,
-		),
+	// Border layout: name on left, slider expands in center, controls on right
+	sliderRow := container.NewBorder(nil, nil,
+		nameLabel,
+		container.NewHBox(volumeLabel, muteBtn, sinkBtn),
+		slider,
 	)
+
+	streamContainer := container.NewVBox(sliderRow)
 
 	if a.expanded[stream.ID] {
 		sinkList := container.NewVBox()
@@ -477,8 +568,7 @@ func (a *AudioApp) makeApplicationsRecording() *fyne.Container {
 }
 
 func (a *AudioApp) makeMicStreamItem(stream MicStream) *fyne.Container {
-	nameLabel := widget.NewLabel("󰍬")
-	appLabel := widget.NewLabel(stream.Name)
+	nameLabel := widget.NewLabel("󰍬 " + stream.Name)
 
 	volume := stream.Volume
 	slider := widget.NewSlider(0, 100)
@@ -501,12 +591,11 @@ func (a *AudioApp) makeMicStreamItem(stream MicStream) *fyne.Container {
 		setSourceOutputVolume(stream.ID, vol) // Already debounced
 	}
 
-	return container.NewHBox(
+	// Border layout: name on left, slider expands in center, controls on right
+	return container.NewBorder(nil, nil,
 		nameLabel,
-		appLabel,
+		container.NewHBox(volumeLabel, muteBtn),
 		slider,
-		volumeLabel,
-		muteBtn,
 	)
 }
 
@@ -578,9 +667,11 @@ func (t *DarkTheme) Icon(name fyne.ThemeIconName) fyne.Resource {
 func (t *DarkTheme) Size(name fyne.ThemeSizeName) float32 {
 	switch name {
 	case theme.SizeNamePadding:
-		return 4
+		return 8
 	case theme.SizeNameInnerPadding:
-		return 2
+		return 4
+	case theme.SizeNameSeparatorThickness:
+		return 1
 	default:
 		return theme.DefaultTheme().Size(name)
 	}
