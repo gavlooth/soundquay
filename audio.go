@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -118,8 +119,9 @@ func getSinkInputs() []AudioStream {
 	scanner := bufio.NewScanner(strings.NewReader(out))
 	var stream *AudioStream
 	reSink := regexp.MustCompile(`sink:\s+(.+?)\s+`)
-	reVolume := regexp.MustCompile(`volume:\s+front-left:\s+(\d+)/\s+`)
-	reMono := regexp.MustCompile(`volume:\s+mono:\s+(\d+)/\s+`)
+	// Capture the percentage (e.g., "50" from "front-left: 32768 /  50% / -18.06 dB")
+	reVolume := regexp.MustCompile(`(?i)volume:\s+front-left:\s+\d+\s*/\s*(\d+)%`)
+	reMono := regexp.MustCompile(`(?i)volume:\s+mono:\s+\d+\s*/\s*(\d+)%`)
 	reMuted := regexp.MustCompile(`muted:\s+(\w+)`)
 	reName := regexp.MustCompile(`application.name\s+=\s+"([^"]+)"`)
 	reBinary := regexp.MustCompile(`application.process.binary\s+=\s+"([^"]+)"`)
@@ -176,8 +178,9 @@ func getSourceOutputs() []MicStream {
 	scanner := bufio.NewScanner(strings.NewReader(out))
 	var stream *MicStream
 	reSource := regexp.MustCompile(`source:\s+(.+?)\s+`)
-	reVolume := regexp.MustCompile(`volume:\s+front-left:\s+(\d+)/\s+`)
-	reMono := regexp.MustCompile(`volume:\s+mono:\s+(\d+)/\s+`)
+	// Capture the percentage (e.g., "50" from "front-left: 32768 /  50% / -18.06 dB")
+	reVolume := regexp.MustCompile(`(?i)volume:\s+front-left:\s+\d+\s*/\s*(\d+)%`)
+	reMono := regexp.MustCompile(`(?i)volume:\s+mono:\s+\d+\s*/\s*(\d+)%`)
 	reMuted := regexp.MustCompile(`muted:\s+(\w+)`)
 	reName := regexp.MustCompile(`application.name\s+=\s+"([^"]+)"`)
 	reBinary := regexp.MustCompile(`application.process.binary\s+=\s+"([^"]+)"`)
@@ -233,15 +236,16 @@ func getSinks() []AudioSink {
 
 	scanner := bufio.NewScanner(strings.NewReader(out))
 	var sink *AudioSink
-	reVolume := regexp.MustCompile(`volume:\s+front-left:\s+(\d+)/\s+`)
-	reMono := regexp.MustCompile(`volume:\s+mono:\s+(\d+)/\s+`)
+	// Capture the percentage (e.g., "50" from "front-left: 32768 /  50% / -18.06 dB")
+	reVolume := regexp.MustCompile(`(?i)volume:\s+front-left:\s+\d+\s*/\s*(\d+)%`)
+	reMono := regexp.MustCompile(`(?i)volume:\s+mono:\s+\d+\s*/\s*(\d+)%`)
 	reMuted := regexp.MustCompile(`muted:\s+(\w+)`)
-	reName := regexp.MustCompile(`device.description\s+=\s+"([^"]+)"`)
-	reName2 := regexp.MustCompile(`node.name\s+=\s+"([^"]+)"`)
+	reDesc := regexp.MustCompile(`device.description\s+=\s+"([^"]+)"`)
+	reDesc2 := regexp.MustCompile(`node.name\s+=\s+"([^"]+)"`)
+	reSinkName := regexp.MustCompile(`^\s*Name:\s+(.+)$`)
 
 	for scanner.Scan() {
 		line := scanner.Text()
-		line = strings.TrimSpace(line)
 
 		if strings.Contains(line, "Sink #") {
 			if sink != nil {
@@ -253,11 +257,15 @@ func getSinks() []AudioSink {
 				sink.ID = matches[1]
 			}
 		} else if sink != nil {
-			if matches := reName.FindStringSubmatch(line); len(matches) > 1 {
+			// Parse the actual sink Name (e.g., "Name: alsa_output.usb-...")
+			if matches := reSinkName.FindStringSubmatch(line); len(matches) > 1 {
+				sink.Name = matches[1]
+			}
+			if matches := reDesc.FindStringSubmatch(line); len(matches) > 1 {
 				sink.Description = matches[1]
 			}
 			if sink.Description == "" {
-				if matches := reName2.FindStringSubmatch(line); len(matches) > 1 {
+				if matches := reDesc2.FindStringSubmatch(line); len(matches) > 1 {
 					sink.Description = matches[1]
 				}
 			}
@@ -281,11 +289,11 @@ func getSinks() []AudioSink {
 	}
 
 	defaultSink, _ := runCmd("pactl", "get-default-sink")
+	defaultSink = strings.TrimSpace(defaultSink)
 	pipeWireID := getPipeWireDefaultID()
 	for i := range sinks {
 		sinks[i].Default = sinks[i].Name == defaultSink
 		sinks[i].PipeWireID = pipeWireID
-		sinks[i].Name = "alsa_output." + sinks[i].ID
 	}
 
 	return sinks
@@ -297,15 +305,16 @@ func getSources() []AudioSource {
 
 	scanner := bufio.NewScanner(strings.NewReader(out))
 	var source *AudioSource
-	reVolume := regexp.MustCompile(`volume:\s+front-left:\s+(\d+)/\s+`)
-	reMono := regexp.MustCompile(`volume:\s+mono:\s+(\d+)/\s+`)
+	// Capture the percentage (e.g., "50" from "front-left: 32768 /  50% / -18.06 dB")
+	reVolume := regexp.MustCompile(`(?i)volume:\s+front-left:\s+\d+\s*/\s*(\d+)%`)
+	reMono := regexp.MustCompile(`(?i)volume:\s+mono:\s+\d+\s*/\s*(\d+)%`)
 	reMuted := regexp.MustCompile(`muted:\s+(\w+)`)
-	reName := regexp.MustCompile(`device.description\s+=\s+"([^"]+)"`)
-	reName2 := regexp.MustCompile(`node.name\s+=\s+"([^"]+)"`)
+	reDesc := regexp.MustCompile(`device.description\s+=\s+"([^"]+)"`)
+	reDesc2 := regexp.MustCompile(`node.name\s+=\s+"([^"]+)"`)
+	reSourceName := regexp.MustCompile(`^\s*Name:\s+(.+)$`)
 
 	for scanner.Scan() {
 		line := scanner.Text()
-		line = strings.TrimSpace(line)
 
 		if strings.Contains(line, "Source #") {
 			if source != nil {
@@ -317,11 +326,15 @@ func getSources() []AudioSource {
 				source.ID = matches[1]
 			}
 		} else if source != nil {
-			if matches := reName.FindStringSubmatch(line); len(matches) > 1 {
+			// Parse the actual source Name
+			if matches := reSourceName.FindStringSubmatch(line); len(matches) > 1 {
+				source.Name = matches[1]
+			}
+			if matches := reDesc.FindStringSubmatch(line); len(matches) > 1 {
 				source.Description = matches[1]
 			}
 			if source.Description == "" {
-				if matches := reName2.FindStringSubmatch(line); len(matches) > 1 {
+				if matches := reDesc2.FindStringSubmatch(line); len(matches) > 1 {
 					source.Description = matches[1]
 				}
 			}
@@ -345,11 +358,11 @@ func getSources() []AudioSource {
 	}
 
 	defaultSource, _ := runCmd("pactl", "get-default-source")
+	defaultSource = strings.TrimSpace(defaultSource)
 	pipeWireID := getPipeWireDefaultID()
 	for i := range sources {
 		sources[i].Default = sources[i].Name == defaultSource
 		sources[i].PipeWireID = pipeWireID
-		sources[i].Name = "alsa_input." + sources[i].ID
 	}
 
 	return sources
@@ -424,7 +437,12 @@ func setVolume(volume int) {
 		volumeTimer.Stop()
 	}
 	volumeTimer = time.AfterFunc(debounceDelay, func() {
-		_, _ = runCmd("pactl", "set-sink-volume", "@DEFAULT_SINK@", fmt.Sprintf("%d%%", volume))
+		cmd := fmt.Sprintf("%d%%", volume)
+		log.Printf("[PACTL] set-sink-volume @DEFAULT_SINK@ %s", cmd)
+		out, err := runCmd("pactl", "set-sink-volume", "@DEFAULT_SINK@", cmd)
+		if err != nil {
+			log.Printf("[PACTL] ERROR: %v, output: %s", err, out)
+		}
 	})
 }
 

@@ -3,14 +3,16 @@ package main
 import (
 	"flag"
 	"fmt"
+	"image/color"
+	"log"
+	"strings"
+	"time"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"image/color"
-	"log"
-	"time"
 )
 
 // Action types - like Clojure keywords
@@ -70,6 +72,12 @@ type AudioApp struct {
 	// Track last user interaction to avoid overwriting pending changes
 	lastVolumeChange    time.Time
 	lastMicVolumeChange time.Time
+
+	// Flag to prevent OnChanged from firing during programmatic updates
+	updatingSliders bool
+
+	// Flag to force full UI rebuild (e.g., when toggling device lists)
+	needsRebuild bool
 }
 
 // Dispatch sends an action to the coordinator goroutine
@@ -245,6 +253,10 @@ func (a *AudioApp) refreshUI() {
 	gracePeriod := 3 * time.Second // Don't overwrite user changes for 3 seconds
 
 	fyne.DoAndWait(func() {
+		// Set flag to prevent OnChanged from triggering setVolume during programmatic updates
+		a.updatingSliders = true
+		defer func() { a.updatingSliders = false }()
+
 		// Update existing sliders instead of rebuilding entire UI
 		if a.volumeSlider != nil {
 			currentSliderVal := int(a.volumeSlider.Value)
@@ -274,10 +286,18 @@ func (a *AudioApp) refreshUI() {
 			}
 		}
 
-		// Only rebuild full UI if widgets don't exist yet
-		if a.volumeSlider == nil {
+		// Rebuild full UI if widgets don't exist yet or if rebuild is requested
+		if a.volumeSlider == nil || a.needsRebuild {
+			a.needsRebuild = false
 			scrollOffset := a.scroll.Offset
 			buildStart := time.Now()
+
+			// Clear slider references so they get recreated
+			a.volumeSlider = nil
+			a.volumeLabel = nil
+			a.micVolumeSlider = nil
+			a.micVolumeLabel = nil
+
 			newRoot := a.makeAudioPopup()
 			log.Printf("[REFRESH] makeAudioPopup took %v", time.Since(buildStart))
 
@@ -343,6 +363,9 @@ func (a *AudioApp) makeMainVolume() *fyne.Container {
 	}
 
 	a.volumeSlider.OnChanged = func(value float64) {
+		if a.updatingSliders {
+			return // Skip during programmatic updates
+		}
 		vol := int(value)
 		log.Printf("[SLIDER] Main volume: status=%d%% -> slider=%d%%", a.status.Volume, vol)
 		a.volumeLabel.SetText(fmt.Sprintf("%d%%", vol))
@@ -360,20 +383,42 @@ func (a *AudioApp) makeMainVolume() *fyne.Container {
 }
 
 func (a *AudioApp) makeOutputDevices() *fyne.Container {
-	label := widget.NewLabel("Output Device")
+	expanded := a.expanded["output_devices"]
+	toggleIcon := "▼"
+	if expanded {
+		toggleIcon = "▲"
+	}
+
+	headerBtn := widget.NewButton(fmt.Sprintf("%s Output Device", toggleIcon), func() {
+		a.expanded["output_devices"] = !a.expanded["output_devices"]
+		a.needsRebuild = true
+		a.Dispatch(ActionRefreshStatus, nil)
+	})
+	headerBtn.Alignment = widget.ButtonAlignLeading
+
+	if !expanded {
+		// Show just the default device name when collapsed
+		defaultName := "None"
+		for _, sink := range a.status.Sinks {
+			if sink.Default {
+				defaultName = sink.Description
+				break
+			}
+		}
+		return container.NewVBox(
+			headerBtn,
+			widget.NewLabel("  "+defaultName),
+		)
+	}
 
 	var items []*widget.Check
 	for _, sink := range a.status.Sinks {
 		sink := sink
 		checkState := sink.Default
-		check := widget.NewCheck(
-			fmt.Sprintf("%s %s", getSinkIcon(checkState), sink.Description),
-			nil,
-		)
+		check := widget.NewCheck(sink.Description, nil)
 		check.Checked = checkState
 		check.OnChanged = func(checked bool) {
 			if checked {
-				// Dispatch action instead of direct call
 				a.Dispatch(ActionSetSink, SetSinkData{SinkName: sink.Name})
 				for _, item := range items {
 					if item != check {
@@ -391,7 +436,7 @@ func (a *AudioApp) makeOutputDevices() *fyne.Container {
 	}
 
 	return container.NewVBox(
-		label,
+		headerBtn,
 		itemsContainer,
 	)
 }
@@ -419,6 +464,9 @@ func (a *AudioApp) makeMicrophoneSection() *fyne.Container {
 	}
 
 	a.micVolumeSlider.OnChanged = func(value float64) {
+		if a.updatingSliders {
+			return // Skip during programmatic updates
+		}
 		vol := int(value)
 		log.Printf("[SLIDER] Mic volume: status=%d%% -> slider=%d%%", a.status.MicVolume, vol)
 		a.micVolumeLabel.SetText(fmt.Sprintf("%d%%", vol))
@@ -436,16 +484,47 @@ func (a *AudioApp) makeMicrophoneSection() *fyne.Container {
 }
 
 func (a *AudioApp) makeInputDevices() *fyne.Container {
-	label := widget.NewLabel("Input Device")
+	expanded := a.expanded["input_devices"]
+	toggleIcon := "▼"
+	if expanded {
+		toggleIcon = "▲"
+	}
+
+	headerBtn := widget.NewButton(fmt.Sprintf("%s Input Device", toggleIcon), func() {
+		a.expanded["input_devices"] = !a.expanded["input_devices"]
+		a.needsRebuild = true
+		a.Dispatch(ActionRefreshStatus, nil)
+	})
+	headerBtn.Alignment = widget.ButtonAlignLeading
+
+	// Filter out monitor sources (they're virtual loopback sources, not real mics)
+	var realSources []AudioSource
+	for _, source := range a.status.Sources {
+		if !strings.HasSuffix(source.Name, ".monitor") {
+			realSources = append(realSources, source)
+		}
+	}
+
+	if !expanded {
+		// Show just the default device name when collapsed
+		defaultName := "None"
+		for _, source := range realSources {
+			if source.Default {
+				defaultName = source.Description
+				break
+			}
+		}
+		return container.NewVBox(
+			headerBtn,
+			widget.NewLabel("  "+defaultName),
+		)
+	}
 
 	var items []*widget.Check
-	for _, source := range a.status.Sources {
+	for _, source := range realSources {
 		source := source
 		checkState := source.Default
-		check := widget.NewCheck(
-			fmt.Sprintf("%s %s", getSourceIcon(checkState), source.Description),
-			nil,
-		)
+		check := widget.NewCheck(source.Description, nil)
 		check.Checked = checkState
 		check.OnChanged = func(checked bool) {
 			if checked {
@@ -466,16 +545,27 @@ func (a *AudioApp) makeInputDevices() *fyne.Container {
 	}
 
 	return container.NewVBox(
-		label,
+		headerBtn,
 		itemsContainer,
 	)
 }
 
 func (a *AudioApp) makeApplicationsPlaying() *fyne.Container {
-	label := widget.NewLabel("Applications Playing")
+	expanded := a.expanded["apps_playing"]
+	toggleIcon := "▼"
+	if expanded {
+		toggleIcon = "▲"
+	}
 
-	if len(a.status.Streams) == 0 {
-		return container.NewVBox(label)
+	headerBtn := widget.NewButton(fmt.Sprintf("%s Applications Playing (%d)", toggleIcon, len(a.status.Streams)), func() {
+		a.expanded["apps_playing"] = !a.expanded["apps_playing"]
+		a.needsRebuild = true
+		a.Dispatch(ActionRefreshStatus, nil)
+	})
+	headerBtn.Alignment = widget.ButtonAlignLeading
+
+	if len(a.status.Streams) == 0 || !expanded {
+		return container.NewVBox(headerBtn)
 	}
 
 	streamsContainer := container.NewVBox()
@@ -484,7 +574,7 @@ func (a *AudioApp) makeApplicationsPlaying() *fyne.Container {
 	}
 
 	return container.NewVBox(
-		label,
+		headerBtn,
 		streamsContainer,
 	)
 }
@@ -550,10 +640,21 @@ func (a *AudioApp) makeStreamItem(stream AudioStream) *fyne.Container {
 }
 
 func (a *AudioApp) makeApplicationsRecording() *fyne.Container {
-	label := widget.NewLabel("Applications Recording")
+	expanded := a.expanded["apps_recording"]
+	toggleIcon := "▼"
+	if expanded {
+		toggleIcon = "▲"
+	}
 
-	if len(a.status.MicStreams) == 0 {
-		return container.NewVBox(label)
+	headerBtn := widget.NewButton(fmt.Sprintf("%s Applications Recording (%d)", toggleIcon, len(a.status.MicStreams)), func() {
+		a.expanded["apps_recording"] = !a.expanded["apps_recording"]
+		a.needsRebuild = true
+		a.Dispatch(ActionRefreshStatus, nil)
+	})
+	headerBtn.Alignment = widget.ButtonAlignLeading
+
+	if len(a.status.MicStreams) == 0 || !expanded {
+		return container.NewVBox(headerBtn)
 	}
 
 	streamsContainer := container.NewVBox()
@@ -562,7 +663,7 @@ func (a *AudioApp) makeApplicationsRecording() *fyne.Container {
 	}
 
 	return container.NewVBox(
-		label,
+		headerBtn,
 		streamsContainer,
 	)
 }

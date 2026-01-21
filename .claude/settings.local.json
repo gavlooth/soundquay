@@ -12,7 +12,14 @@
       "Bash(echo:*)",
       "Bash([[ \":$PATH:\" == *\":$HOME/.local/bin:\"* ]])",
       "Bash(/usr/bin/cp -f audio-indicator ~/.local/bin/)",
-      "Bash(/usr/bin/cp:*)"
+      "Bash(/usr/bin/cp:*)",
+      "Bash(pactl list:*)",
+      "Bash(pactl get-default-sink:*)",
+      "Bash(yes:*)",
+      "Bash(jj git push:*)",
+      "Bash(jj describe:*)",
+      "Bash(jj log:*)",
+      "Bash(jj git remote:*)"
     ]
   }
 }
