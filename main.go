@@ -78,6 +78,9 @@ type AudioApp struct {
 
 	// Flag to force full UI rebuild (e.g., when toggling device lists)
 	needsRebuild bool
+
+	// Window title from CLI
+	title string
 }
 
 // Dispatch sends an action to the coordinator goroutine
@@ -113,6 +116,7 @@ func main() {
 		expanded:     make(map[string]bool),
 		actionChan:   make(chan ActionMsg, 100), // Buffered like your Clojure main-action-channel
 		triggerFetch: make(chan struct{}, 1),    // Buffered 1 for non-blocking signal
+		title:        *title,
 	}
 
 	appInstance.window = fyneApp.NewWindow(*title)
@@ -123,8 +127,16 @@ func main() {
 
 	// Create root container with persistent scroll
 	appInstance.root = appInstance.makeAudioPopup()
-	appInstance.scroll = container.NewVScroll(appInstance.root)
-	appInstance.window.SetContent(appInstance.scroll)
+	// Add right margin for scrollbar spacing
+	rightSpacer := container.NewGridWrap(fyne.NewSize(16, 0))
+	contentWithMargin := container.NewBorder(nil, nil, nil, rightSpacer, appInstance.root)
+	appInstance.scroll = container.NewVScroll(contentWithMargin)
+	appInstance.scroll.SetMinSize(fyne.NewSize(0, 400))
+
+	// Header outside scroll, scroll area with padding
+	header := appInstance.makeHeader()
+	paddedScroll := container.NewPadded(appInstance.scroll)
+	appInstance.window.SetContent(container.NewBorder(header, nil, nil, nil, paddedScroll))
 
 	// Log initial sizes for debugging layout
 	log.Printf("[STARTUP] Window size: %v", appInstance.window.Canvas().Size())
@@ -189,23 +201,43 @@ func (a *AudioApp) handleAction(msg ActionMsg) {
 		if data, ok := msg.Data.(ExpandData); ok {
 			log.Printf("[ACTION] ToggleExpand: %s -> %v", data.StreamID, !a.expanded[data.StreamID])
 			a.expanded[data.StreamID] = !a.expanded[data.StreamID]
+			a.needsRebuild = true
 			a.refreshUI()
 		}
 
 	case ActionSetSink:
 		if data, ok := msg.Data.(SetSinkData); ok {
 			log.Printf("[ACTION] SetSink: %s", data.SinkName)
-			// Optimistic update: mark sink as selected immediately
+			// Optimistic update: mark sink as selected and move all streams
+			// Find the sink ID for the given sink name
+			var sinkID string
 			for i := range a.status.Sinks {
-				a.status.Sinks[i].Default = (a.status.Sinks[i].Name == data.SinkName)
+				if a.status.Sinks[i].Name == data.SinkName {
+					sinkID = a.status.Sinks[i].ID
+					a.status.Sinks[i].Default = true
+				} else {
+					a.status.Sinks[i].Default = false
+				}
 			}
+			for i := range a.status.Streams {
+				a.status.Streams[i].SinkName = sinkID
+			}
+			a.needsRebuild = true
 			a.refreshUI() // Immediate feedback
 
-			// Do I/O in background, then signal fetcher (not getStatus directly)
+			// Do I/O in background: set default and move all streams
+			streams := make([]string, len(a.status.Streams))
+			for i, s := range a.status.Streams {
+				streams[i] = s.ID
+			}
 			go func() {
 				log.Println("[IO] setSink starting...")
 				start := time.Now()
 				setSink(data.SinkName)
+				// Move all existing streams to the new sink
+				for _, streamID := range streams {
+					moveSinkInput(streamID, data.SinkName)
+				}
 				log.Printf("[IO] setSink took %v", time.Since(start))
 				a.RequestFetch() // Signal fetcher instead of direct getStatus
 			}()
@@ -213,28 +245,56 @@ func (a *AudioApp) handleAction(msg ActionMsg) {
 
 	case ActionSetSource:
 		if data, ok := msg.Data.(SetSourceData); ok {
-			// Optimistic update
+			// Optimistic update: mark source as selected and move all mic streams
+			// Find the source ID for the given source name
+			var sourceID string
 			for i := range a.status.Sources {
-				a.status.Sources[i].Default = (a.status.Sources[i].Name == data.SourceName)
+				if a.status.Sources[i].Name == data.SourceName {
+					sourceID = a.status.Sources[i].ID
+					a.status.Sources[i].Default = true
+				} else {
+					a.status.Sources[i].Default = false
+				}
 			}
+			for i := range a.status.MicStreams {
+				a.status.MicStreams[i].SourceName = sourceID
+			}
+			a.needsRebuild = true
 			a.refreshUI()
 
+			// Do I/O in background: set default and move all mic streams
+			micStreams := make([]string, len(a.status.MicStreams))
+			for i, s := range a.status.MicStreams {
+				micStreams[i] = s.ID
+			}
 			go func() {
 				setSource(data.SourceName)
+				// Move all existing mic streams to the new source
+				for _, streamID := range micStreams {
+					moveSourceOutput(streamID, data.SourceName)
+				}
 				a.RequestFetch() // Signal fetcher
 			}()
 		}
 
 	case ActionMoveSinkInput:
 		if data, ok := msg.Data.(MoveSinkInputData); ok {
-			// Optimistic update
-			a.expanded[data.StreamID] = false
-			for i := range a.status.Streams {
-				if a.status.Streams[i].ID == data.StreamID {
-					a.status.Streams[i].SinkName = data.SinkName
+			// Find the sink ID for the given sink name
+			var sinkID string
+			for _, sink := range a.status.Sinks {
+				if sink.Name == data.SinkName {
+					sinkID = sink.ID
 					break
 				}
 			}
+			// Optimistic update (keep dropdown open)
+			for i := range a.status.Streams {
+				if a.status.Streams[i].ID == data.StreamID {
+					a.status.Streams[i].SinkName = sinkID
+					break
+				}
+			}
+			a.needsRebuild = true
 			a.refreshUI() // Immediate feedback
 
 			go func() {
@@ -313,14 +373,10 @@ func (a *AudioApp) refreshUI() {
 
 func (a *AudioApp) makeAudioPopup() *fyne.Container {
 	return container.NewVBox(
-		a.makeHeader(),
-		widget.NewSeparator(),
 		a.makeMainVolume(),
-		widget.NewSeparator(),
 		a.makeOutputDevices(),
 		widget.NewSeparator(),
 		a.makeMicrophoneSection(),
-		widget.NewSeparator(),
 		a.makeInputDevices(),
 		widget.NewSeparator(),
 		a.makeApplicationsPlaying(),
@@ -330,12 +386,18 @@ func (a *AudioApp) makeAudioPopup() *fyne.Container {
 }
 
 func (a *AudioApp) makeHeader() *fyne.Container {
+	closeBtn := widget.NewButton("󰅖", func() {
+		a.window.Close()
+	})
+	closeBtn.Importance = widget.LowImportance
+
+	// Title with larger font
+	titleText := widget.NewRichTextFromMarkdown("# 󰕾 " + a.title)
+
 	// Border layout: title on left, close button on right, spacer in center
 	return container.NewBorder(nil, nil,
-		widget.NewLabel("󰕾 Audio"),
-		widget.NewButton("󰅖", func() {
-			a.window.Close()
-		}),
+		titleText,
+		closeBtn,
 		nil, // Empty center acts as spacer
 	)
 }
@@ -356,10 +418,12 @@ func (a *AudioApp) makeMainVolume() *fyne.Container {
 	muteBtnState := isMuted
 
 	muteBtn := widget.NewButton(getMuteIcon(muteBtnState), nil)
+	muteBtn.Importance = widget.LowImportance
 	muteBtn.OnTapped = func() {
 		muteBtnState = !muteBtnState
-		go setMute(muteBtnState) // Blocking I/O in goroutine
+		go setMute(muteBtnState)
 		muteBtn.SetText(getMuteIcon(muteBtnState))
+		muteBtn.Refresh()
 	}
 
 	a.volumeSlider.OnChanged = func(value float64) {
@@ -389,7 +453,7 @@ func (a *AudioApp) makeOutputDevices() *fyne.Container {
 		toggleIcon = "▲"
 	}
 
-	headerBtn := widget.NewButton(fmt.Sprintf("%s Output Device", toggleIcon), func() {
+	headerBtn := widget.NewButton(fmt.Sprintf("%s Output Device (%d)", toggleIcon, len(a.status.Sinks)), func() {
 		a.expanded["output_devices"] = !a.expanded["output_devices"]
 		a.needsRebuild = true
 		a.Dispatch(ActionRefreshStatus, nil)
@@ -411,28 +475,22 @@ func (a *AudioApp) makeOutputDevices() *fyne.Container {
 		)
 	}
 
-	var items []*widget.Check
+	itemsContainer := container.NewVBox()
 	for _, sink := range a.status.Sinks {
 		sink := sink
-		checkState := sink.Default
-		check := widget.NewCheck(sink.Description, nil)
-		check.Checked = checkState
-		check.OnChanged = func(checked bool) {
-			if checked {
+		sinkBtn := widget.NewButton(
+			fmt.Sprintf("%s %s", getSinkIcon(sink.Default), sink.Description),
+			func() {
 				a.Dispatch(ActionSetSink, SetSinkData{SinkName: sink.Name})
-				for _, item := range items {
-					if item != check {
-						item.SetChecked(false)
-					}
-				}
-			}
+			},
+		)
+		sinkBtn.Alignment = widget.ButtonAlignLeading
+		if sink.Default {
+			sinkBtn.Importance = widget.HighImportance
+		} else {
+			sinkBtn.Importance = widget.LowImportance
 		}
-		items = append(items, check)
-	}
-
-	itemsContainer := container.NewVBox()
-	for _, item := range items {
-		itemsContainer.Add(item)
+		itemsContainer.Add(sinkBtn)
 	}
 
 	return container.NewVBox(
@@ -457,10 +515,12 @@ func (a *AudioApp) makeMicrophoneSection() *fyne.Container {
 	muteBtnState := isMuted
 
 	muteBtn := widget.NewButton(getMicMuteIcon(muteBtnState), nil)
+	muteBtn.Importance = widget.LowImportance
 	muteBtn.OnTapped = func() {
 		muteBtnState = !muteBtnState
 		go setMicMute(muteBtnState)
 		muteBtn.SetText(getMicMuteIcon(muteBtnState))
+		muteBtn.Refresh()
 	}
 
 	a.micVolumeSlider.OnChanged = func(value float64) {
@@ -490,13 +550,6 @@ func (a *AudioApp) makeInputDevices() *fyne.Container {
 		toggleIcon = "▲"
 	}
 
-	headerBtn := widget.NewButton(fmt.Sprintf("%s Input Device", toggleIcon), func() {
-		a.expanded["input_devices"] = !a.expanded["input_devices"]
-		a.needsRebuild = true
-		a.Dispatch(ActionRefreshStatus, nil)
-	})
-	headerBtn.Alignment = widget.ButtonAlignLeading
-
 	// Filter out monitor sources (they're virtual loopback sources, not real mics)
 	var realSources []AudioSource
 	for _, source := range a.status.Sources {
@@ -504,6 +557,13 @@ func (a *AudioApp) makeInputDevices() *fyne.Container {
 			realSources = append(realSources, source)
 		}
 	}
+
+	headerBtn := widget.NewButton(fmt.Sprintf("%s Input Device (%d)", toggleIcon, len(realSources)), func() {
+		a.expanded["input_devices"] = !a.expanded["input_devices"]
+		a.needsRebuild = true
+		a.Dispatch(ActionRefreshStatus, nil)
+	})
+	headerBtn.Alignment = widget.ButtonAlignLeading
 
 	if !expanded {
 		// Show just the default device name when collapsed
@@ -520,28 +580,22 @@ func (a *AudioApp) makeInputDevices() *fyne.Container {
 		)
 	}
 
-	var items []*widget.Check
+	itemsContainer := container.NewVBox()
 	for _, source := range realSources {
 		source := source
-		checkState := source.Default
-		check := widget.NewCheck(source.Description, nil)
-		check.Checked = checkState
-		check.OnChanged = func(checked bool) {
-			if checked {
+		sourceBtn := widget.NewButton(
+			fmt.Sprintf("%s %s", getSourceIcon(source.Default), source.Description),
+			func() {
 				a.Dispatch(ActionSetSource, SetSourceData{SourceName: source.Name})
-				for _, item := range items {
-					if item != check {
-						item.SetChecked(false)
-					}
-				}
-			}
+			},
+		)
+		sourceBtn.Alignment = widget.ButtonAlignLeading
+		if source.Default {
+			sourceBtn.Importance = widget.HighImportance
+		} else {
+			sourceBtn.Importance = widget.LowImportance
 		}
-		items = append(items, check)
-	}
-
-	itemsContainer := container.NewVBox()
-	for _, item := range items {
-		itemsContainer.Add(item)
+		itemsContainer.Add(sourceBtn)
 	}
 
 	return container.NewVBox(
@@ -592,16 +646,20 @@ func (a *AudioApp) makeStreamItem(stream AudioStream) *fyne.Container {
 	muteBtnState := isMuted
 
 	muteBtn := widget.NewButton(getMuteIcon(muteBtnState), nil)
+	muteBtn.Importance = widget.LowImportance
 	muteBtn.OnTapped = func() {
 		muteBtnState = !muteBtnState
 		go setStreamMute(stream.ID, muteBtnState)
 		muteBtn.SetText(getMuteIcon(muteBtnState))
+		muteBtn.Refresh()
 	}
 
 	// Dispatch action for expand toggle
-	sinkBtn := widget.NewButton(getSinkExpandIcon(a.expanded[stream.ID]), func() {
+	sinkBtn := widget.NewButton(getSinkExpandIcon(a.expanded[stream.ID]), nil)
+	sinkBtn.Importance = widget.LowImportance
+	sinkBtn.OnTapped = func() {
 		a.Dispatch(ActionToggleExpand, ExpandData{StreamID: stream.ID})
-	})
+	}
 
 	slider.OnChanged = func(value float64) {
 		vol := int(value)
@@ -622,8 +680,10 @@ func (a *AudioApp) makeStreamItem(stream AudioStream) *fyne.Container {
 		sinkList := container.NewVBox()
 		for _, sink := range a.status.Sinks {
 			sink := sink
+			// Compare by sink ID (index number) since stream.SinkName contains the index
+			isSelected := sink.ID == stream.SinkName
 			sinkItem := widget.NewButton(
-				fmt.Sprintf("%s %s", getSinkIcon(sink.Name == stream.SinkName), sink.Description),
+				fmt.Sprintf("%s %s", getSinkIcon(isSelected), sink.Description),
 				func() {
 					a.Dispatch(ActionMoveSinkInput, MoveSinkInputData{
 						StreamID: stream.ID,
@@ -631,6 +691,12 @@ func (a *AudioApp) makeStreamItem(stream AudioStream) *fyne.Container {
 					})
 				},
 			)
+			sinkItem.Alignment = widget.ButtonAlignLeading
+			if isSelected {
+				sinkItem.Importance = widget.HighImportance
+			} else {
+				sinkItem.Importance = widget.LowImportance
+			}
 			sinkList.Add(sinkItem)
 		}
 		streamContainer.Add(sinkList)
@@ -680,10 +746,12 @@ func (a *AudioApp) makeMicStreamItem(stream MicStream) *fyne.Container {
 	muteBtnState := isMuted
 
 	muteBtn := widget.NewButton(getMicMuteIcon(muteBtnState), nil)
+	muteBtn.Importance = widget.LowImportance
 	muteBtn.OnTapped = func() {
 		muteBtnState = !muteBtnState
 		go setSourceOutputMute(stream.ID, muteBtnState)
 		muteBtn.SetText(getMicMuteIcon(muteBtnState))
+		muteBtn.Refresh()
 	}
 
 	slider.OnChanged = func(value float64) {
@@ -773,6 +841,10 @@ func (t *DarkTheme) Size(name fyne.ThemeSizeName) float32 {
 		return 4
 	case theme.SizeNameSeparatorThickness:
 		return 1
+	case theme.SizeNameScrollBar:
+		return 16
+	case theme.SizeNameScrollBarSmall:
+		return 12
 	default:
 		return theme.DefaultTheme().Size(name)
 	}
