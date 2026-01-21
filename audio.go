@@ -72,6 +72,14 @@ var (
 		Sources:    []AudioSource{},
 	}
 	statusMutex sync.RWMutex
+
+	// Debounce timers for volume changes
+	volumeTimer      *time.Timer
+	micVolumeTimer   *time.Timer
+	streamTimers     = make(map[string]*time.Timer)
+	sourceOutTimers  = make(map[string]*time.Timer)
+	debounceMutex    sync.Mutex
+	debounceDelay    = 50 * time.Millisecond
 )
 
 func runCmd(name string, args ...string) (string, error) {
@@ -273,9 +281,10 @@ func getSinks() []AudioSink {
 	}
 
 	defaultSink, _ := runCmd("pactl", "get-default-sink")
+	pipeWireID := getPipeWireDefaultID()
 	for i := range sinks {
 		sinks[i].Default = sinks[i].Name == defaultSink
-		sinks[i].PipeWireID = getPipeWireDefaultID()
+		sinks[i].PipeWireID = pipeWireID
 		sinks[i].Name = "alsa_output." + sinks[i].ID
 	}
 
@@ -336,9 +345,10 @@ func getSources() []AudioSource {
 	}
 
 	defaultSource, _ := runCmd("pactl", "get-default-source")
+	pipeWireID := getPipeWireDefaultID()
 	for i := range sources {
 		sources[i].Default = sources[i].Name == defaultSource
-		sources[i].PipeWireID = getPipeWireDefaultID()
+		sources[i].PipeWireID = pipeWireID
 		sources[i].Name = "alsa_input." + sources[i].ID
 	}
 
@@ -407,7 +417,15 @@ func getStatus() *AudioStatus {
 }
 
 func setVolume(volume int) {
-	_, _ = runCmd("pactl", "set-sink-volume", "@DEFAULT_SINK@", fmt.Sprintf("%d%%", volume))
+	debounceMutex.Lock()
+	defer debounceMutex.Unlock()
+
+	if volumeTimer != nil {
+		volumeTimer.Stop()
+	}
+	volumeTimer = time.AfterFunc(debounceDelay, func() {
+		_, _ = runCmd("pactl", "set-sink-volume", "@DEFAULT_SINK@", fmt.Sprintf("%d%%", volume))
+	})
 }
 
 func setMute(muted bool) {
@@ -419,7 +437,15 @@ func setMute(muted bool) {
 }
 
 func setMicVolume(volume int) {
-	_, _ = runCmd("pactl", "set-source-volume", "@DEFAULT_SOURCE@", fmt.Sprintf("%d%%", volume))
+	debounceMutex.Lock()
+	defer debounceMutex.Unlock()
+
+	if micVolumeTimer != nil {
+		micVolumeTimer.Stop()
+	}
+	micVolumeTimer = time.AfterFunc(debounceDelay, func() {
+		_, _ = runCmd("pactl", "set-source-volume", "@DEFAULT_SOURCE@", fmt.Sprintf("%d%%", volume))
+	})
 }
 
 func setMicMute(muted bool) {
@@ -439,7 +465,15 @@ func setSource(sourceName string) {
 }
 
 func setStreamVolume(streamID string, volume int) {
-	_, _ = runCmd("pactl", "set-sink-input-volume", streamID, fmt.Sprintf("%d%%", volume))
+	debounceMutex.Lock()
+	defer debounceMutex.Unlock()
+
+	if timer, exists := streamTimers[streamID]; exists {
+		timer.Stop()
+	}
+	streamTimers[streamID] = time.AfterFunc(debounceDelay, func() {
+		_, _ = runCmd("pactl", "set-sink-input-volume", streamID, fmt.Sprintf("%d%%", volume))
+	})
 }
 
 func setStreamMute(streamID string, muted bool) {
@@ -451,7 +485,15 @@ func setStreamMute(streamID string, muted bool) {
 }
 
 func setSourceOutputVolume(streamID string, volume int) {
-	_, _ = runCmd("pactl", "set-source-output-volume", streamID, fmt.Sprintf("%d%%", volume))
+	debounceMutex.Lock()
+	defer debounceMutex.Unlock()
+
+	if timer, exists := sourceOutTimers[streamID]; exists {
+		timer.Stop()
+	}
+	sourceOutTimers[streamID] = time.AfterFunc(debounceDelay, func() {
+		_, _ = runCmd("pactl", "set-source-output-volume", streamID, fmt.Sprintf("%d%%", volume))
+	})
 }
 
 func setSourceOutputMute(streamID string, muted bool) {

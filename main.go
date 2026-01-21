@@ -11,50 +11,96 @@ import (
 	"time"
 )
 
+// Action types - like Clojure keywords
+type Action int
+
+const (
+	ActionRefreshStatus Action = iota
+	ActionToggleExpand
+	ActionSetSink
+	ActionSetSource
+	ActionMoveSinkInput
+)
+
+// ActionMsg carries the action and its data through the channel
+type ActionMsg struct {
+	Action Action
+	Data   interface{}
+}
+
+// Action data types
+type ExpandData struct {
+	StreamID string
+}
+
+type SetSinkData struct {
+	SinkName string
+}
+
+type SetSourceData struct {
+	SourceName string
+}
+
+type MoveSinkInputData struct {
+	StreamID string
+	SinkName string
+}
+
 type AudioApp struct {
-	window       fyne.Window
-	status       *AudioStatus
-	expanded     map[string]bool
-	root         *fyne.Container
-	updateSignal  chan struct{}
+	window     fyne.Window
+	status     *AudioStatus
+	expanded   map[string]bool
+	root       *fyne.Container
+	actionChan chan ActionMsg // Single channel for all actions
+}
+
+// Dispatch sends an action to the coordinator goroutine
+func (a *AudioApp) Dispatch(action Action, data interface{}) {
+	select {
+	case a.actionChan <- ActionMsg{Action: action, Data: data}:
+	default:
+		// Channel full, drop action (backpressure)
+	}
 }
 
 func main() {
-	a := app.New()
-	a.Settings().SetTheme(&DarkTheme{})
+	fyneApp := app.New()
+	fyneApp.Settings().SetTheme(&DarkTheme{})
 
 	appInstance := &AudioApp{
-		expanded: make(map[string]bool),
+		expanded:   make(map[string]bool),
+		actionChan: make(chan ActionMsg, 100), // Buffered like your Clojure main-action-channel
 	}
 
-	appInstance.window = a.NewWindow("Audio Indicator")
+	appInstance.window = fyneApp.NewWindow("Audio Indicator")
 	appInstance.window.Resize(fyne.NewSize(380, 600))
 
-	// Initial status load
-	appInstance.status = GetCurrentStatus()
+	// Initial status load (blocking, but only at startup)
+	appInstance.status = getStatus()
 
 	// Create root container
 	appInstance.root = appInstance.makeAudioPopup()
 	appInstance.window.SetContent(appInstance.root)
 
-	// Handle UI updates on main thread
+	// Single coordinator goroutine - like your Clojure go-loop
+	// All state mutations happen here, serialized
 	go func() {
-		for range appInstance.updateSignal {
-			appInstance.refreshUI()
-		}
-	}()
+		ticker := time.NewTicker(2 * time.Second)
+		defer ticker.Stop()
 
-	// Start background audio updates
-	go func() {
 		for {
-			time.Sleep(2 * time.Second)
-			status := GetCurrentStatus()
-			appInstance.status = status
-
-			// Signal UI to update on main thread
 			select {
-			case appInstance.updateSignal <- struct{}{}:
-			default:
+			case action := <-appInstance.actionChan:
+				// Handle action (like evolve-flow multimethod dispatch)
+				appInstance.handleAction(action)
+
+			case <-ticker.C:
+				// Periodic poll (like your timeout-chan in alts!)
+				// Spawn goroutine for blocking I/O, then dispatch result
+				go func() {
+					getStatus() // Blocking I/O in separate goroutine
+					appInstance.Dispatch(ActionRefreshStatus, nil)
+				}()
 			}
 		}
 	}()
@@ -62,8 +108,42 @@ func main() {
 	appInstance.window.ShowAndRun()
 }
 
+// handleAction processes actions sequentially (like evolve-flow)
+func (a *AudioApp) handleAction(msg ActionMsg) {
+	switch msg.Action {
+	case ActionRefreshStatus:
+		a.status = GetCurrentStatus()
+		a.refreshUI()
+
+	case ActionToggleExpand:
+		if data, ok := msg.Data.(ExpandData); ok {
+			a.expanded[data.StreamID] = !a.expanded[data.StreamID]
+			a.refreshUI()
+		}
+
+	case ActionSetSink:
+		if data, ok := msg.Data.(SetSinkData); ok {
+			go setSink(data.SinkName) // Blocking I/O in goroutine
+			// Refresh will happen on next poll or can dispatch refresh
+			a.Dispatch(ActionRefreshStatus, nil)
+		}
+
+	case ActionSetSource:
+		if data, ok := msg.Data.(SetSourceData); ok {
+			go setSource(data.SourceName)
+			a.Dispatch(ActionRefreshStatus, nil)
+		}
+
+	case ActionMoveSinkInput:
+		if data, ok := msg.Data.(MoveSinkInputData); ok {
+			go moveSinkInput(data.StreamID, data.SinkName)
+			a.expanded[data.StreamID] = false
+			a.refreshUI()
+		}
+	}
+}
+
 func (a *AudioApp) refreshUI() {
-	// Recreate the entire content
 	newRoot := a.makeAudioPopup()
 	a.root.Objects = newRoot.Objects
 	a.root.Refresh()
@@ -107,16 +187,14 @@ func (a *AudioApp) makeMainVolume() *fyne.Container {
 	muteBtn := widget.NewButton(getMuteIcon(muteBtnState), nil)
 	muteBtn.OnTapped = func() {
 		muteBtnState = !muteBtnState
-		setMute(muteBtnState)
+		go setMute(muteBtnState) // Blocking I/O in goroutine
 		muteBtn.SetText(getMuteIcon(muteBtnState))
-		// Signal UI update
-		a.refreshUI()
 	}
 
 	slider.OnChanged = func(value float64) {
 		vol := int(value)
 		volumeLabel.SetText(fmt.Sprintf("%d%%", vol))
-		setVolume(vol)
+		setVolume(vol) // Already debounced in audio.go
 	}
 
 	return container.NewVBox(
@@ -134,7 +212,7 @@ func (a *AudioApp) makeOutputDevices() *fyne.Container {
 
 	var items []*widget.Check
 	for _, sink := range a.status.Sinks {
-		sink := sink // capture variable
+		sink := sink
 		checkState := sink.Default
 		check := widget.NewCheck(
 			fmt.Sprintf("%s %s", getSinkIcon(checkState), sink.Description),
@@ -143,9 +221,8 @@ func (a *AudioApp) makeOutputDevices() *fyne.Container {
 		check.Checked = checkState
 		check.OnChanged = func(checked bool) {
 			if checked {
-				setSink(sink.Name)
-				checkState = checked
-				// Uncheck other sinks
+				// Dispatch action instead of direct call
+				a.Dispatch(ActionSetSink, SetSinkData{SinkName: sink.Name})
 				for _, item := range items {
 					if item != check {
 						item.SetChecked(false)
@@ -182,14 +259,14 @@ func (a *AudioApp) makeMicrophoneSection() *fyne.Container {
 	muteBtn := widget.NewButton(getMicMuteIcon(muteBtnState), nil)
 	muteBtn.OnTapped = func() {
 		muteBtnState = !muteBtnState
-		setMicMute(muteBtnState)
+		go setMicMute(muteBtnState)
 		muteBtn.SetText(getMicMuteIcon(muteBtnState))
 	}
 
 	slider.OnChanged = func(value float64) {
 		vol := int(value)
 		volumeLabel.SetText(fmt.Sprintf("%d%%", vol))
-		setMicVolume(vol)
+		setMicVolume(vol) // Already debounced
 	}
 
 	return container.NewVBox(
@@ -207,7 +284,7 @@ func (a *AudioApp) makeInputDevices() *fyne.Container {
 
 	var items []*widget.Check
 	for _, source := range a.status.Sources {
-		source := source // capture variable
+		source := source
 		checkState := source.Default
 		check := widget.NewCheck(
 			fmt.Sprintf("%s %s", getSourceIcon(checkState), source.Description),
@@ -216,9 +293,7 @@ func (a *AudioApp) makeInputDevices() *fyne.Container {
 		check.Checked = checkState
 		check.OnChanged = func(checked bool) {
 			if checked {
-				setSource(source.Name)
-				checkState = checked
-				// Uncheck other sources
+				a.Dispatch(ActionSetSource, SetSourceData{SourceName: source.Name})
 				for _, item := range items {
 					if item != check {
 						item.SetChecked(false)
@@ -273,19 +348,19 @@ func (a *AudioApp) makeStreamItem(stream AudioStream) *fyne.Container {
 	muteBtn := widget.NewButton(getMuteIcon(muteBtnState), nil)
 	muteBtn.OnTapped = func() {
 		muteBtnState = !muteBtnState
-		setStreamMute(stream.ID, muteBtnState)
+		go setStreamMute(stream.ID, muteBtnState)
 		muteBtn.SetText(getMuteIcon(muteBtnState))
 	}
 
+	// Dispatch action for expand toggle
 	sinkBtn := widget.NewButton(getSinkExpandIcon(a.expanded[stream.ID]), func() {
-		a.expanded[stream.ID] = !a.expanded[stream.ID]
-		a.refreshUI()
+		a.Dispatch(ActionToggleExpand, ExpandData{StreamID: stream.ID})
 	})
 
 	slider.OnChanged = func(value float64) {
 		vol := int(value)
 		volumeLabel.SetText(fmt.Sprintf("%d%%", vol))
-		setStreamVolume(stream.ID, vol)
+		setStreamVolume(stream.ID, vol) // Already debounced
 	}
 
 	streamContainer := container.NewVBox(
@@ -298,17 +373,17 @@ func (a *AudioApp) makeStreamItem(stream AudioStream) *fyne.Container {
 		),
 	)
 
-	// Add dropdown for sink selection if expanded
 	if a.expanded[stream.ID] {
 		sinkList := container.NewVBox()
 		for _, sink := range a.status.Sinks {
-			sink := sink // capture variable
+			sink := sink
 			sinkItem := widget.NewButton(
 				fmt.Sprintf("%s %s", getSinkIcon(sink.Name == stream.SinkName), sink.Description),
 				func() {
-					moveSinkInput(stream.ID, sink.Name)
-					a.expanded[stream.ID] = false
-					a.refreshUI()
+					a.Dispatch(ActionMoveSinkInput, MoveSinkInputData{
+						StreamID: stream.ID,
+						SinkName: sink.Name,
+					})
 				},
 			)
 			sinkList.Add(sinkItem)
@@ -352,14 +427,14 @@ func (a *AudioApp) makeMicStreamItem(stream MicStream) *fyne.Container {
 	muteBtn := widget.NewButton(getMicMuteIcon(muteBtnState), nil)
 	muteBtn.OnTapped = func() {
 		muteBtnState = !muteBtnState
-		setSourceOutputMute(stream.ID, muteBtnState)
+		go setSourceOutputMute(stream.ID, muteBtnState)
 		muteBtn.SetText(getMicMuteIcon(muteBtnState))
 	}
 
 	slider.OnChanged = func(value float64) {
 		vol := int(value)
 		volumeLabel.SetText(fmt.Sprintf("%d%%", vol))
-		setSourceOutputVolume(stream.ID, vol)
+		setSourceOutputVolume(stream.ID, vol) // Already debounced
 	}
 
 	return container.NewHBox(
