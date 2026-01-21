@@ -8,6 +8,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"image/color"
+	"log"
 	"time"
 )
 
@@ -21,6 +22,10 @@ const (
 	ActionSetSource
 	ActionMoveSinkInput
 )
+
+func (a Action) String() string {
+	return [...]string{"RefreshStatus", "ToggleExpand", "SetSink", "SetSource", "MoveSinkInput"}[a]
+}
 
 // ActionMsg carries the action and its data through the channel
 type ActionMsg struct {
@@ -51,15 +56,18 @@ type AudioApp struct {
 	status     *AudioStatus
 	expanded   map[string]bool
 	root       *fyne.Container
-	actionChan chan ActionMsg // Single channel for all actions
+	scroll     *container.Scroll // Persistent scroll container
+	actionChan chan ActionMsg    // Single channel for all actions
 }
 
 // Dispatch sends an action to the coordinator goroutine
 func (a *AudioApp) Dispatch(action Action, data interface{}) {
+	log.Printf("[DISPATCH] → %s", action)
 	select {
 	case a.actionChan <- ActionMsg{Action: action, Data: data}:
+		log.Printf("[DISPATCH] ✓ %s queued", action)
 	default:
-		// Channel full, drop action (backpressure)
+		log.Printf("[DISPATCH] ✗ %s DROPPED (channel full)", action)
 	}
 }
 
@@ -78,27 +86,32 @@ func main() {
 	// Initial status load (blocking, but only at startup)
 	appInstance.status = getStatus()
 
-	// Create root container
+	// Create root container with persistent scroll
 	appInstance.root = appInstance.makeAudioPopup()
-	appInstance.window.SetContent(appInstance.root)
+	appInstance.scroll = container.NewVScroll(appInstance.root)
+	appInstance.window.SetContent(appInstance.scroll)
 
 	// Single coordinator goroutine - like your Clojure go-loop
 	// All state mutations happen here, serialized
 	go func() {
+		log.Println("[COORDINATOR] Started")
 		ticker := time.NewTicker(2 * time.Second)
 		defer ticker.Stop()
 
 		for {
 			select {
 			case action := <-appInstance.actionChan:
-				// Handle action (like evolve-flow multimethod dispatch)
+				log.Printf("[COORDINATOR] ← Received %s", action.Action)
+				start := time.Now()
 				appInstance.handleAction(action)
+				log.Printf("[COORDINATOR] ✓ Handled %s in %v", action.Action, time.Since(start))
 
 			case <-ticker.C:
-				// Periodic poll (like your timeout-chan in alts!)
-				// Spawn goroutine for blocking I/O, then dispatch result
+				log.Println("[TICKER] Polling status...")
 				go func() {
-					getStatus() // Blocking I/O in separate goroutine
+					start := time.Now()
+					getStatus()
+					log.Printf("[TICKER] getStatus() took %v", time.Since(start))
 					appInstance.Dispatch(ActionRefreshStatus, nil)
 				}()
 			}
@@ -117,36 +130,87 @@ func (a *AudioApp) handleAction(msg ActionMsg) {
 
 	case ActionToggleExpand:
 		if data, ok := msg.Data.(ExpandData); ok {
+			log.Printf("[ACTION] ToggleExpand: %s -> %v", data.StreamID, !a.expanded[data.StreamID])
 			a.expanded[data.StreamID] = !a.expanded[data.StreamID]
 			a.refreshUI()
 		}
 
 	case ActionSetSink:
 		if data, ok := msg.Data.(SetSinkData); ok {
-			go setSink(data.SinkName) // Blocking I/O in goroutine
-			// Refresh will happen on next poll or can dispatch refresh
-			a.Dispatch(ActionRefreshStatus, nil)
+			log.Printf("[ACTION] SetSink: %s", data.SinkName)
+			// Optimistic update: mark sink as selected immediately
+			for i := range a.status.Sinks {
+				a.status.Sinks[i].Default = (a.status.Sinks[i].Name == data.SinkName)
+			}
+			a.refreshUI() // Immediate feedback
+
+			// Sync with actual state in background
+			go func() {
+				log.Println("[IO] setSink starting...")
+				start := time.Now()
+				setSink(data.SinkName)
+				log.Printf("[IO] setSink took %v", time.Since(start))
+				getStatus()
+				a.Dispatch(ActionRefreshStatus, nil)
+			}()
 		}
 
 	case ActionSetSource:
 		if data, ok := msg.Data.(SetSourceData); ok {
-			go setSource(data.SourceName)
-			a.Dispatch(ActionRefreshStatus, nil)
+			// Optimistic update
+			for i := range a.status.Sources {
+				a.status.Sources[i].Default = (a.status.Sources[i].Name == data.SourceName)
+			}
+			a.refreshUI()
+
+			go func() {
+				setSource(data.SourceName)
+				getStatus()
+				a.Dispatch(ActionRefreshStatus, nil)
+			}()
 		}
 
 	case ActionMoveSinkInput:
 		if data, ok := msg.Data.(MoveSinkInputData); ok {
-			go moveSinkInput(data.StreamID, data.SinkName)
+			// Optimistic update
 			a.expanded[data.StreamID] = false
-			a.refreshUI()
+			for i := range a.status.Streams {
+				if a.status.Streams[i].ID == data.StreamID {
+					a.status.Streams[i].SinkName = data.SinkName
+					break
+				}
+			}
+			a.refreshUI() // Immediate feedback
+
+			go func() {
+				moveSinkInput(data.StreamID, data.SinkName)
+				getStatus()
+				a.Dispatch(ActionRefreshStatus, nil)
+			}()
 		}
 	}
 }
 
 func (a *AudioApp) refreshUI() {
+	start := time.Now()
+	log.Println("[REFRESH] Starting...")
+
+	// Save scroll position
+	scrollOffset := a.scroll.Offset
+
+	// Update content
+	buildStart := time.Now()
 	newRoot := a.makeAudioPopup()
+	log.Printf("[REFRESH] makeAudioPopup took %v", time.Since(buildStart))
+
 	a.root.Objects = newRoot.Objects
 	a.root.Refresh()
+
+	// Restore scroll position after refresh
+	a.scroll.Offset = scrollOffset
+	a.scroll.Refresh()
+
+	log.Printf("[REFRESH] ✓ Complete in %v", time.Since(start))
 }
 
 func (a *AudioApp) makeAudioPopup() *fyne.Container {
