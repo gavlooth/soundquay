@@ -1,0 +1,65 @@
+[
+  {
+    "index": 14300,
+    "driver": "PipeWire",
+    "owner_module": null,
+    "client": "14298",
+    "source": 1551,
+    "sample_specification": "s16le 2ch 44100Hz",
+    "channel_map": "front-left,front-right",
+    "format": "pcm, format.sample_format = \"\\\"s16le\\\"\"  format.rate = \"44100\"  format.channels = \"2\"  format.channel_map = \"\\\"front-left,front-right\\\"\"",
+    "corked": false,
+    "mute": false,
+    "volume": {
+      "front-left": {
+        "value": 65536,
+        "value_percent": "100%",
+        "db": "0.00 dB"
+      },
+      "front-right": {
+        "value": 65536,
+        "value_percent": "100%",
+        "db": "0.00 dB"
+      }
+    },
+    "balance": 0.0,
+    "buffer_latency_usec": 0.0,
+    "source_latency_usec": 0.0,
+    "resample_method": "PipeWire",
+    "properties": {
+      "client.api": "pipewire-pulse",
+      "pulse.server.type": "unix",
+      "application.name": "Audio indicator fixture recording",
+      "media.name": "/dev/null",
+      "application.process.id": "1001",
+      "application.process.user": "user",
+      "application.process.host": "example-host",
+      "application.process.binary": "pacat",
+      "application.language": "en_US.UTF-8",
+      "application.process.machine_id": "00000000000000000000000000000000",
+      "application.process.session_id": "2",
+      "pulse.corked": "false",
+      "node.rate": "1/44100",
+      "node.latency": "88200/44100",
+      "stream.is-live": "true",
+      "node.name": "Audio indicator fixture recording",
+      "node.want-driver": "true",
+      "node.autoconnect": "true",
+      "media.class": "Stream/Input/Audio",
+      "port.group": "stream.0",
+      "adapt.follower.spa-node": "",
+      "object.register": "false",
+      "factory.id": "7",
+      "clock.quantum-limit": "8192",
+      "node.loop.name": "data-loop.0",
+      "library.name": "audioconvert/libspa-audioconvert",
+      "client.id": "163",
+      "object.id": "122",
+      "object.serial": "14300",
+      "node.driver-id": "111",
+      "pulse.attr.maxlength": "4194304",
+      "pulse.attr.fragsize": "352800",
+      "module-stream-restore.id": "source-output-by-application-name:Audio indicator fixture recording"
+    }
+  }
+]

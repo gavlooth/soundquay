@@ -1,0 +1,1321 @@
+[
+  {
+    "index": 56,
+    "name": "alsa_card.pci-0000_00_1f.3",
+    "driver": "alsa",
+    "owner_module": null,
+    "properties": {
+      "device.enum.api": "udev",
+      "device.api": "alsa",
+      "media.class": "Audio/Device",
+      "api.alsa.path": "hw:4",
+      "api.alsa.card": "4",
+      "api.alsa.card.name": "HDA Intel PCH",
+      "api.alsa.card.longname": "HDA Intel PCH at 0x50202a0000 irq 228",
+      "device.plugged.usec": "6223793",
+      "device.bus_path": "pci-0000:00:1f.3",
+      "sysfs.path": "/devices/pci0000:00/0000:00:1f.3/sound/card4",
+      "device.bus": "pci",
+      "device.subsystem": "sound",
+      "device.vendor.id": "0x8086",
+      "device.vendor.name": "Intel Corporation",
+      "device.product.id": "0x7e28",
+      "device.product.name": "Meteor Lake-P HD Audio Controller",
+      "device.form_factor": "internal",
+      "device.name": "alsa_card.pci-0000_00_1f.3",
+      "device.description": "Built-in Audio",
+      "device.nick": "HDA Intel PCH",
+      "device.icon_name": "audio-card-analog-pci",
+      "api.alsa.use-acp": "true",
+      "api.acp.auto-profile": "false",
+      "api.acp.auto-port": "false",
+      "api.dbus.ReserveDevice1.Priority": "-20",
+      "api.alsa.split-enable": "true",
+      "api.dbus.ReserveDevice1": "Audio4",
+      "spa.object.id": "10",
+      "factory.id": "15",
+      "client.id": "49",
+      "object.id": "54",
+      "object.serial": "56",
+      "object.path": "alsa:acp:PCH",
+      "alsa.card": "4",
+      "alsa.card_name": "HDA Intel PCH",
+      "alsa.long_card_name": "HDA Intel PCH at 0x50202a0000 irq 228",
+      "alsa.driver_name": "snd_hda_intel",
+      "alsa.mixer_name": "Realtek ALC269VC",
+      "alsa.components": "HDA:10ec0269,1f4cb014,00100203 HDA:8086281d,80860101,00100000",
+      "alsa.id": "PCH",
+      "device.string": "4"
+    },
+    "profiles": {
+      "off": {
+        "description": "Off",
+        "sinks": 0,
+        "sources": 0,
+        "priority": 0,
+        "available": true
+      },
+      "output:analog-stereo+input:analog-stereo": {
+        "description": "Analog Stereo Duplex",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 6565,
+        "available": false
+      },
+      "output:analog-stereo": {
+        "description": "Analog Stereo Output",
+        "sinks": 1,
+        "sources": 0,
+        "priority": 6500,
+        "available": false
+      },
+      "output:hdmi-stereo+input:analog-stereo": {
+        "description": "Digital Stereo (HDMI) Output + Analog Stereo Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 5965,
+        "available": true
+      },
+      "output:hdmi-stereo": {
+        "description": "Digital Stereo (HDMI) Output",
+        "sinks": 1,
+        "sources": 0,
+        "priority": 5900,
+        "available": true
+      },
+      "output:hdmi-stereo-extra1+input:analog-stereo": {
+        "description": "Digital Stereo (HDMI 2) Output + Analog Stereo Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 5765,
+        "available": false
+      },
+      "output:hdmi-stereo-extra2+input:analog-stereo": {
+        "description": "Digital Stereo (HDMI 3) Output + Analog Stereo Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 5765,
+        "available": false
+      },
+      "output:hdmi-stereo-extra3+input:analog-stereo": {
+        "description": "Digital Stereo (HDMI 4) Output + Analog Stereo Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 5765,
+        "available": false
+      },
+      "output:hdmi-stereo-extra1": {
+        "description": "Digital Stereo (HDMI 2) Output",
+        "sinks": 1,
+        "sources": 0,
+        "priority": 5700,
+        "available": false
+      },
+      "output:hdmi-stereo-extra2": {
+        "description": "Digital Stereo (HDMI 3) Output",
+        "sinks": 1,
+        "sources": 0,
+        "priority": 5700,
+        "available": false
+      },
+      "output:hdmi-stereo-extra3": {
+        "description": "Digital Stereo (HDMI 4) Output",
+        "sinks": 1,
+        "sources": 0,
+        "priority": 5700,
+        "available": false
+      },
+      "output:hdmi-surround-extra1+input:analog-stereo": {
+        "description": "Digital Surround 5.1 (HDMI 2) Output + Analog Stereo Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 665,
+        "available": false
+      },
+      "output:hdmi-surround71-extra1+input:analog-stereo": {
+        "description": "Digital Surround 7.1 (HDMI 2) Output + Analog Stereo Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 665,
+        "available": false
+      },
+      "output:hdmi-surround-extra2+input:analog-stereo": {
+        "description": "Digital Surround 5.1 (HDMI 3) Output + Analog Stereo Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 665,
+        "available": false
+      },
+      "output:hdmi-surround71-extra2+input:analog-stereo": {
+        "description": "Digital Surround 7.1 (HDMI 3) Output + Analog Stereo Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 665,
+        "available": false
+      },
+      "output:hdmi-surround-extra3+input:analog-stereo": {
+        "description": "Digital Surround 5.1 (HDMI 4) Output + Analog Stereo Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 665,
+        "available": false
+      },
+      "output:hdmi-surround71-extra3+input:analog-stereo": {
+        "description": "Digital Surround 7.1 (HDMI 4) Output + Analog Stereo Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 665,
+        "available": false
+      },
+      "output:hdmi-surround-extra1": {
+        "description": "Digital Surround 5.1 (HDMI 2) Output",
+        "sinks": 1,
+        "sources": 0,
+        "priority": 600,
+        "available": false
+      },
+      "output:hdmi-surround71-extra1": {
+        "description": "Digital Surround 7.1 (HDMI 2) Output",
+        "sinks": 1,
+        "sources": 0,
+        "priority": 600,
+        "available": false
+      },
+      "output:hdmi-surround-extra2": {
+        "description": "Digital Surround 5.1 (HDMI 3) Output",
+        "sinks": 1,
+        "sources": 0,
+        "priority": 600,
+        "available": false
+      },
+      "output:hdmi-surround71-extra2": {
+        "description": "Digital Surround 7.1 (HDMI 3) Output",
+        "sinks": 1,
+        "sources": 0,
+        "priority": 600,
+        "available": false
+      },
+      "output:hdmi-surround-extra3": {
+        "description": "Digital Surround 5.1 (HDMI 4) Output",
+        "sinks": 1,
+        "sources": 0,
+        "priority": 600,
+        "available": false
+      },
+      "output:hdmi-surround71-extra3": {
+        "description": "Digital Surround 7.1 (HDMI 4) Output",
+        "sinks": 1,
+        "sources": 0,
+        "priority": 600,
+        "available": false
+      },
+      "input:analog-stereo": {
+        "description": "Analog Stereo Input",
+        "sinks": 0,
+        "sources": 1,
+        "priority": 65,
+        "available": true
+      },
+      "pro-audio": {
+        "description": "Pro Audio",
+        "sinks": 5,
+        "sources": 1,
+        "priority": 1,
+        "available": true
+      }
+    },
+    "active_profile": "output:hdmi-stereo+input:analog-stereo",
+    "ports": {
+      "analog-input-internal-mic": {
+        "description": "Internal Microphone",
+        "type": "Mic",
+        "priority": 8900,
+        "latency_offset": "0 usec",
+        "availability_group": "Legacy 1",
+        "availability": "availability unknown",
+        "properties": {
+          "port.type": "mic",
+          "port.availability-group": "Legacy 1",
+          "device.icon_name": "audio-input-microphone",
+          "card.profile.port": "0"
+        },
+        "profiles": [
+          "input:analog-stereo",
+          "output:analog-stereo+input:analog-stereo",
+          "output:hdmi-stereo+input:analog-stereo",
+          "output:hdmi-stereo-extra1+input:analog-stereo",
+          "output:hdmi-surround-extra1+input:analog-stereo",
+          "output:hdmi-surround71-extra1+input:analog-stereo",
+          "output:hdmi-stereo-extra2+input:analog-stereo",
+          "output:hdmi-surround-extra2+input:analog-stereo",
+          "output:hdmi-surround71-extra2+input:analog-stereo",
+          "output:hdmi-stereo-extra3+input:analog-stereo",
+          "output:hdmi-surround-extra3+input:analog-stereo",
+          "output:hdmi-surround71-extra3+input:analog-stereo"
+        ]
+      },
+      "analog-input-mic": {
+        "description": "Microphone",
+        "type": "Mic",
+        "priority": 8700,
+        "latency_offset": "0 usec",
+        "availability_group": "Legacy 2",
+        "availability": "not available",
+        "properties": {
+          "port.type": "mic",
+          "port.availability-group": "Legacy 2",
+          "device.icon_name": "audio-input-microphone",
+          "card.profile.port": "1"
+        },
+        "profiles": [
+          "input:analog-stereo",
+          "output:analog-stereo+input:analog-stereo",
+          "output:hdmi-stereo+input:analog-stereo",
+          "output:hdmi-stereo-extra1+input:analog-stereo",
+          "output:hdmi-surround-extra1+input:analog-stereo",
+          "output:hdmi-surround71-extra1+input:analog-stereo",
+          "output:hdmi-stereo-extra2+input:analog-stereo",
+          "output:hdmi-surround-extra2+input:analog-stereo",
+          "output:hdmi-surround71-extra2+input:analog-stereo",
+          "output:hdmi-stereo-extra3+input:analog-stereo",
+          "output:hdmi-surround-extra3+input:analog-stereo",
+          "output:hdmi-surround71-extra3+input:analog-stereo"
+        ]
+      },
+      "analog-output-headphones": {
+        "description": "Headphones",
+        "type": "Headphones",
+        "priority": 9900,
+        "latency_offset": "0 usec",
+        "availability_group": "Legacy 3",
+        "availability": "not available",
+        "properties": {
+          "port.type": "headphones",
+          "port.availability-group": "Legacy 3",
+          "device.icon_name": "audio-headphones",
+          "card.profile.port": "2"
+        },
+        "profiles": [
+          "output:analog-stereo",
+          "output:analog-stereo+input:analog-stereo"
+        ]
+      },
+      "hdmi-output-0": {
+        "description": "HDMI / DisplayPort",
+        "type": "HDMI",
+        "priority": 5900,
+        "latency_offset": "0 usec",
+        "availability_group": "Legacy 4",
+        "availability": "available",
+        "properties": {
+          "port.type": "hdmi",
+          "port.availability-group": "Legacy 4",
+          "device.icon_name": "video-display",
+          "card.profile.port": "3",
+          "device.product.name": "Odyssey G5",
+          "iec958.codecs.detected": "[\"PCM\"]",
+          "audio.channels.detected": "2",
+          "audio.position.detected": "[FL,FR]"
+        },
+        "profiles": [
+          "output:hdmi-stereo",
+          "output:hdmi-stereo+input:analog-stereo"
+        ]
+      },
+      "hdmi-output-1": {
+        "description": "HDMI / DisplayPort 2",
+        "type": "HDMI",
+        "priority": 5800,
+        "latency_offset": "0 usec",
+        "availability_group": "Legacy 5",
+        "availability": "not available",
+        "properties": {
+          "port.type": "hdmi",
+          "port.availability-group": "Legacy 5",
+          "device.icon_name": "video-display",
+          "card.profile.port": "4"
+        },
+        "profiles": [
+          "output:hdmi-stereo-extra1",
+          "output:hdmi-stereo-extra1+input:analog-stereo",
+          "output:hdmi-surround-extra1",
+          "output:hdmi-surround-extra1+input:analog-stereo",
+          "output:hdmi-surround71-extra1",
+          "output:hdmi-surround71-extra1+input:analog-stereo"
+        ]
+      },
+      "hdmi-output-2": {
+        "description": "HDMI / DisplayPort 3",
+        "type": "HDMI",
+        "priority": 5700,
+        "latency_offset": "0 usec",
+        "availability_group": "Legacy 6",
+        "availability": "not available",
+        "properties": {
+          "port.type": "hdmi",
+          "port.availability-group": "Legacy 6",
+          "device.icon_name": "video-display",
+          "card.profile.port": "5"
+        },
+        "profiles": [
+          "output:hdmi-stereo-extra2",
+          "output:hdmi-stereo-extra2+input:analog-stereo",
+          "output:hdmi-surround-extra2",
+          "output:hdmi-surround-extra2+input:analog-stereo",
+          "output:hdmi-surround71-extra2",
+          "output:hdmi-surround71-extra2+input:analog-stereo"
+        ]
+      },
+      "hdmi-output-3": {
+        "description": "HDMI / DisplayPort 4",
+        "type": "HDMI",
+        "priority": 5600,
+        "latency_offset": "0 usec",
+        "availability_group": "Legacy 7",
+        "availability": "not available",
+        "properties": {
+          "port.type": "hdmi",
+          "port.availability-group": "Legacy 7",
+          "device.icon_name": "video-display",
+          "card.profile.port": "6"
+        },
+        "profiles": [
+          "output:hdmi-stereo-extra3",
+          "output:hdmi-stereo-extra3+input:analog-stereo",
+          "output:hdmi-surround-extra3",
+          "output:hdmi-surround-extra3+input:analog-stereo",
+          "output:hdmi-surround71-extra3",
+          "output:hdmi-surround71-extra3+input:analog-stereo"
+        ]
+      }
+    }
+  },
+  {
+    "index": 57,
+    "name": "alsa_card.platform-snd_aloop.0",
+    "driver": "alsa",
+    "owner_module": null,
+    "properties": {
+      "device.enum.api": "udev",
+      "device.api": "alsa",
+      "media.class": "Audio/Device",
+      "api.alsa.path": "hw:0",
+      "api.alsa.card": "0",
+      "api.alsa.card.name": "Loopback",
+      "api.alsa.card.longname": "Loopback 1",
+      "device.plugged.usec": "5276401",
+      "device.bus_path": "platform-snd_aloop.0",
+      "sysfs.path": "/devices/platform/snd_aloop.0/sound/card0",
+      "device.subsystem": "sound",
+      "device.form_factor": "internal",
+      "device.name": "alsa_card.platform-snd_aloop.0",
+      "device.description": "Loopback",
+      "device.nick": "Loopback",
+      "device.icon_name": "audio-card-analog",
+      "api.alsa.use-acp": "true",
+      "api.acp.auto-profile": "false",
+      "api.acp.auto-port": "false",
+      "api.dbus.ReserveDevice1.Priority": "-20",
+      "api.alsa.split-enable": "true",
+      "api.dbus.ReserveDevice1": "Audio0",
+      "spa.object.id": "2",
+      "factory.id": "15",
+      "client.id": "49",
+      "object.id": "55",
+      "object.serial": "57",
+      "object.path": "alsa:acp:Loopback",
+      "alsa.card": "0",
+      "alsa.card_name": "Loopback",
+      "alsa.long_card_name": "Loopback 1",
+      "alsa.driver_name": "snd_aloop",
+      "alsa.mixer_name": "Loopback Mixer",
+      "alsa.id": "Loopback",
+      "device.string": "0"
+    },
+    "profiles": {
+      "off": {
+        "description": "Off",
+        "sinks": 0,
+        "sources": 0,
+        "priority": 0,
+        "available": true
+      },
+      "output:analog-stereo+input:analog-stereo": {
+        "description": "Analog Stereo Duplex",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 6565,
+        "available": true
+      },
+      "output:analog-stereo+input:analog-surround-21": {
+        "description": "Analog Stereo Output + Analog Surround 2.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 6513,
+        "available": true
+      },
+      "output:analog-stereo+input:analog-surround-41": {
+        "description": "Analog Stereo Output + Analog Surround 4.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 6513,
+        "available": true
+      },
+      "output:analog-stereo+input:analog-surround-51": {
+        "description": "Analog Stereo Output + Analog Surround 5.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 6513,
+        "available": true
+      },
+      "output:analog-stereo+input:analog-surround-40": {
+        "description": "Analog Stereo Output + Analog Surround 4.0 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 6512,
+        "available": true
+      },
+      "output:analog-stereo+input:analog-surround-50": {
+        "description": "Analog Stereo Output + Analog Surround 5.0 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 6512,
+        "available": true
+      },
+      "output:analog-stereo+input:analog-surround-71": {
+        "description": "Analog Stereo Output + Analog Surround 7.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 6512,
+        "available": true
+      },
+      "output:analog-stereo": {
+        "description": "Analog Stereo Output",
+        "sinks": 1,
+        "sources": 0,
+        "priority": 6500,
+        "available": true
+      },
+      "output:analog-surround-21+input:analog-stereo": {
+        "description": "Analog Surround 2.1 Output + Analog Stereo Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1365,
+        "available": true
+      },
+      "output:analog-surround-41+input:analog-stereo": {
+        "description": "Analog Surround 4.1 Output + Analog Stereo Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1365,
+        "available": true
+      },
+      "output:analog-surround-51+input:analog-stereo": {
+        "description": "Analog Surround 5.1 Output + Analog Stereo Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1365,
+        "available": true
+      },
+      "output:analog-surround-21+input:analog-surround-21": {
+        "description": "Analog Surround 2.1 Output + Analog Surround 2.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1313,
+        "available": true
+      },
+      "output:analog-surround-21+input:analog-surround-41": {
+        "description": "Analog Surround 2.1 Output + Analog Surround 4.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1313,
+        "available": true
+      },
+      "output:analog-surround-21+input:analog-surround-51": {
+        "description": "Analog Surround 2.1 Output + Analog Surround 5.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1313,
+        "available": true
+      },
+      "output:analog-surround-41+input:analog-surround-21": {
+        "description": "Analog Surround 4.1 Output + Analog Surround 2.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1313,
+        "available": true
+      },
+      "output:analog-surround-41+input:analog-surround-41": {
+        "description": "Analog Surround 4.1 Output + Analog Surround 4.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1313,
+        "available": true
+      },
+      "output:analog-surround-41+input:analog-surround-51": {
+        "description": "Analog Surround 4.1 Output + Analog Surround 5.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1313,
+        "available": true
+      },
+      "output:analog-surround-51+input:analog-surround-21": {
+        "description": "Analog Surround 5.1 Output + Analog Surround 2.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1313,
+        "available": true
+      },
+      "output:analog-surround-51+input:analog-surround-41": {
+        "description": "Analog Surround 5.1 Output + Analog Surround 4.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1313,
+        "available": true
+      },
+      "output:analog-surround-51+input:analog-surround-51": {
+        "description": "Analog Surround 5.1 Output + Analog Surround 5.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1313,
+        "available": true
+      },
+      "output:analog-surround-21+input:analog-surround-40": {
+        "description": "Analog Surround 2.1 Output + Analog Surround 4.0 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1312,
+        "available": true
+      },
+      "output:analog-surround-21+input:analog-surround-50": {
+        "description": "Analog Surround 2.1 Output + Analog Surround 5.0 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1312,
+        "available": true
+      },
+      "output:analog-surround-21+input:analog-surround-71": {
+        "description": "Analog Surround 2.1 Output + Analog Surround 7.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1312,
+        "available": true
+      },
+      "output:analog-surround-41+input:analog-surround-40": {
+        "description": "Analog Surround 4.1 Output + Analog Surround 4.0 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1312,
+        "available": true
+      },
+      "output:analog-surround-41+input:analog-surround-50": {
+        "description": "Analog Surround 4.1 Output + Analog Surround 5.0 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1312,
+        "available": true
+      },
+      "output:analog-surround-41+input:analog-surround-71": {
+        "description": "Analog Surround 4.1 Output + Analog Surround 7.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1312,
+        "available": true
+      },
+      "output:analog-surround-51+input:analog-surround-40": {
+        "description": "Analog Surround 5.1 Output + Analog Surround 4.0 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1312,
+        "available": true
+      },
+      "output:analog-surround-51+input:analog-surround-50": {
+        "description": "Analog Surround 5.1 Output + Analog Surround 5.0 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1312,
+        "available": true
+      },
+      "output:analog-surround-51+input:analog-surround-71": {
+        "description": "Analog Surround 5.1 Output + Analog Surround 7.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1312,
+        "available": true
+      },
+      "output:analog-surround-21": {
+        "description": "Analog Surround 2.1 Output",
+        "sinks": 1,
+        "sources": 0,
+        "priority": 1300,
+        "available": true
+      },
+      "output:analog-surround-41": {
+        "description": "Analog Surround 4.1 Output",
+        "sinks": 1,
+        "sources": 0,
+        "priority": 1300,
+        "available": true
+      },
+      "output:analog-surround-51": {
+        "description": "Analog Surround 5.1 Output",
+        "sinks": 1,
+        "sources": 0,
+        "priority": 1300,
+        "available": true
+      },
+      "output:analog-surround-40+input:analog-stereo": {
+        "description": "Analog Surround 4.0 Output + Analog Stereo Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1265,
+        "available": true
+      },
+      "output:analog-surround-50+input:analog-stereo": {
+        "description": "Analog Surround 5.0 Output + Analog Stereo Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1265,
+        "available": true
+      },
+      "output:analog-surround-71+input:analog-stereo": {
+        "description": "Analog Surround 7.1 Output + Analog Stereo Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1265,
+        "available": true
+      },
+      "output:analog-surround-40+input:analog-surround-21": {
+        "description": "Analog Surround 4.0 Output + Analog Surround 2.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1213,
+        "available": true
+      },
+      "output:analog-surround-40+input:analog-surround-41": {
+        "description": "Analog Surround 4.0 Output + Analog Surround 4.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1213,
+        "available": true
+      },
+      "output:analog-surround-40+input:analog-surround-51": {
+        "description": "Analog Surround 4.0 Output + Analog Surround 5.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1213,
+        "available": true
+      },
+      "output:analog-surround-50+input:analog-surround-21": {
+        "description": "Analog Surround 5.0 Output + Analog Surround 2.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1213,
+        "available": true
+      },
+      "output:analog-surround-50+input:analog-surround-41": {
+        "description": "Analog Surround 5.0 Output + Analog Surround 4.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1213,
+        "available": true
+      },
+      "output:analog-surround-50+input:analog-surround-51": {
+        "description": "Analog Surround 5.0 Output + Analog Surround 5.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1213,
+        "available": true
+      },
+      "output:analog-surround-71+input:analog-surround-21": {
+        "description": "Analog Surround 7.1 Output + Analog Surround 2.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1213,
+        "available": true
+      },
+      "output:analog-surround-71+input:analog-surround-41": {
+        "description": "Analog Surround 7.1 Output + Analog Surround 4.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1213,
+        "available": true
+      },
+      "output:analog-surround-71+input:analog-surround-51": {
+        "description": "Analog Surround 7.1 Output + Analog Surround 5.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1213,
+        "available": true
+      },
+      "output:analog-surround-40+input:analog-surround-40": {
+        "description": "Analog Surround 4.0 Output + Analog Surround 4.0 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1212,
+        "available": true
+      },
+      "output:analog-surround-40+input:analog-surround-50": {
+        "description": "Analog Surround 4.0 Output + Analog Surround 5.0 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1212,
+        "available": true
+      },
+      "output:analog-surround-40+input:analog-surround-71": {
+        "description": "Analog Surround 4.0 Output + Analog Surround 7.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1212,
+        "available": true
+      },
+      "output:analog-surround-50+input:analog-surround-40": {
+        "description": "Analog Surround 5.0 Output + Analog Surround 4.0 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1212,
+        "available": true
+      },
+      "output:analog-surround-50+input:analog-surround-50": {
+        "description": "Analog Surround 5.0 Output + Analog Surround 5.0 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1212,
+        "available": true
+      },
+      "output:analog-surround-50+input:analog-surround-71": {
+        "description": "Analog Surround 5.0 Output + Analog Surround 7.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1212,
+        "available": true
+      },
+      "output:analog-surround-71+input:analog-surround-40": {
+        "description": "Analog Surround 7.1 Output + Analog Surround 4.0 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1212,
+        "available": true
+      },
+      "output:analog-surround-71+input:analog-surround-50": {
+        "description": "Analog Surround 7.1 Output + Analog Surround 5.0 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1212,
+        "available": true
+      },
+      "output:analog-surround-71+input:analog-surround-71": {
+        "description": "Analog Surround 7.1 Output + Analog Surround 7.1 Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1212,
+        "available": true
+      },
+      "output:analog-surround-40": {
+        "description": "Analog Surround 4.0 Output",
+        "sinks": 1,
+        "sources": 0,
+        "priority": 1200,
+        "available": true
+      },
+      "output:analog-surround-50": {
+        "description": "Analog Surround 5.0 Output",
+        "sinks": 1,
+        "sources": 0,
+        "priority": 1200,
+        "available": true
+      },
+      "output:analog-surround-71": {
+        "description": "Analog Surround 7.1 Output",
+        "sinks": 1,
+        "sources": 0,
+        "priority": 1200,
+        "available": true
+      },
+      "input:analog-stereo": {
+        "description": "Analog Stereo Input",
+        "sinks": 0,
+        "sources": 1,
+        "priority": 65,
+        "available": true
+      },
+      "input:analog-surround-21": {
+        "description": "Analog Surround 2.1 Input",
+        "sinks": 0,
+        "sources": 1,
+        "priority": 13,
+        "available": true
+      },
+      "input:analog-surround-41": {
+        "description": "Analog Surround 4.1 Input",
+        "sinks": 0,
+        "sources": 1,
+        "priority": 13,
+        "available": true
+      },
+      "input:analog-surround-51": {
+        "description": "Analog Surround 5.1 Input",
+        "sinks": 0,
+        "sources": 1,
+        "priority": 13,
+        "available": true
+      },
+      "input:analog-surround-40": {
+        "description": "Analog Surround 4.0 Input",
+        "sinks": 0,
+        "sources": 1,
+        "priority": 12,
+        "available": true
+      },
+      "input:analog-surround-50": {
+        "description": "Analog Surround 5.0 Input",
+        "sinks": 0,
+        "sources": 1,
+        "priority": 12,
+        "available": true
+      },
+      "input:analog-surround-71": {
+        "description": "Analog Surround 7.1 Input",
+        "sinks": 0,
+        "sources": 1,
+        "priority": 12,
+        "available": true
+      },
+      "pro-audio": {
+        "description": "Pro Audio",
+        "sinks": 2,
+        "sources": 2,
+        "priority": 1,
+        "available": true
+      }
+    },
+    "active_profile": "output:analog-stereo+input:analog-stereo",
+    "ports": {
+      "analog-input": {
+        "description": "Analog Input",
+        "type": "Analog",
+        "priority": 10000,
+        "latency_offset": "0 usec",
+        "availability_group": "",
+        "availability": "availability unknown",
+        "properties": {
+          "port.type": "analog",
+          "card.profile.port": "0"
+        },
+        "profiles": [
+          "input:analog-stereo",
+          "input:analog-surround-21",
+          "input:analog-surround-40",
+          "input:analog-surround-41",
+          "input:analog-surround-50",
+          "input:analog-surround-51",
+          "input:analog-surround-71",
+          "output:analog-stereo+input:analog-stereo",
+          "output:analog-stereo+input:analog-surround-21",
+          "output:analog-stereo+input:analog-surround-40",
+          "output:analog-stereo+input:analog-surround-41",
+          "output:analog-stereo+input:analog-surround-50",
+          "output:analog-stereo+input:analog-surround-51",
+          "output:analog-stereo+input:analog-surround-71",
+          "output:analog-surround-21+input:analog-stereo",
+          "output:analog-surround-21+input:analog-surround-21",
+          "output:analog-surround-21+input:analog-surround-40",
+          "output:analog-surround-21+input:analog-surround-41",
+          "output:analog-surround-21+input:analog-surround-50",
+          "output:analog-surround-21+input:analog-surround-51",
+          "output:analog-surround-21+input:analog-surround-71",
+          "output:analog-surround-40+input:analog-stereo",
+          "output:analog-surround-40+input:analog-surround-21",
+          "output:analog-surround-40+input:analog-surround-40",
+          "output:analog-surround-40+input:analog-surround-41",
+          "output:analog-surround-40+input:analog-surround-50",
+          "output:analog-surround-40+input:analog-surround-51",
+          "output:analog-surround-40+input:analog-surround-71",
+          "output:analog-surround-41+input:analog-stereo",
+          "output:analog-surround-41+input:analog-surround-21",
+          "output:analog-surround-41+input:analog-surround-40",
+          "output:analog-surround-41+input:analog-surround-41",
+          "output:analog-surround-41+input:analog-surround-50",
+          "output:analog-surround-41+input:analog-surround-51",
+          "output:analog-surround-41+input:analog-surround-71",
+          "output:analog-surround-50+input:analog-stereo",
+          "output:analog-surround-50+input:analog-surround-21",
+          "output:analog-surround-50+input:analog-surround-40",
+          "output:analog-surround-50+input:analog-surround-41",
+          "output:analog-surround-50+input:analog-surround-50",
+          "output:analog-surround-50+input:analog-surround-51",
+          "output:analog-surround-50+input:analog-surround-71",
+          "output:analog-surround-51+input:analog-stereo",
+          "output:analog-surround-51+input:analog-surround-21",
+          "output:analog-surround-51+input:analog-surround-40",
+          "output:analog-surround-51+input:analog-surround-41",
+          "output:analog-surround-51+input:analog-surround-50",
+          "output:analog-surround-51+input:analog-surround-51",
+          "output:analog-surround-51+input:analog-surround-71",
+          "output:analog-surround-71+input:analog-stereo",
+          "output:analog-surround-71+input:analog-surround-21",
+          "output:analog-surround-71+input:analog-surround-40",
+          "output:analog-surround-71+input:analog-surround-41",
+          "output:analog-surround-71+input:analog-surround-50",
+          "output:analog-surround-71+input:analog-surround-51",
+          "output:analog-surround-71+input:analog-surround-71"
+        ]
+      },
+      "analog-output": {
+        "description": "Analog Output",
+        "type": "Analog",
+        "priority": 9900,
+        "latency_offset": "0 usec",
+        "availability_group": "",
+        "availability": "availability unknown",
+        "properties": {
+          "port.type": "analog",
+          "card.profile.port": "1"
+        },
+        "profiles": [
+          "output:analog-stereo",
+          "output:analog-stereo+input:analog-stereo",
+          "output:analog-stereo+input:analog-surround-21",
+          "output:analog-stereo+input:analog-surround-40",
+          "output:analog-stereo+input:analog-surround-41",
+          "output:analog-stereo+input:analog-surround-50",
+          "output:analog-stereo+input:analog-surround-51",
+          "output:analog-stereo+input:analog-surround-71",
+          "output:analog-surround-21",
+          "output:analog-surround-21+input:analog-stereo",
+          "output:analog-surround-21+input:analog-surround-21",
+          "output:analog-surround-21+input:analog-surround-40",
+          "output:analog-surround-21+input:analog-surround-41",
+          "output:analog-surround-21+input:analog-surround-50",
+          "output:analog-surround-21+input:analog-surround-51",
+          "output:analog-surround-21+input:analog-surround-71",
+          "output:analog-surround-40",
+          "output:analog-surround-40+input:analog-stereo",
+          "output:analog-surround-40+input:analog-surround-21",
+          "output:analog-surround-40+input:analog-surround-40",
+          "output:analog-surround-40+input:analog-surround-41",
+          "output:analog-surround-40+input:analog-surround-50",
+          "output:analog-surround-40+input:analog-surround-51",
+          "output:analog-surround-40+input:analog-surround-71",
+          "output:analog-surround-41",
+          "output:analog-surround-41+input:analog-stereo",
+          "output:analog-surround-41+input:analog-surround-21",
+          "output:analog-surround-41+input:analog-surround-40",
+          "output:analog-surround-41+input:analog-surround-41",
+          "output:analog-surround-41+input:analog-surround-50",
+          "output:analog-surround-41+input:analog-surround-51",
+          "output:analog-surround-41+input:analog-surround-71",
+          "output:analog-surround-50",
+          "output:analog-surround-50+input:analog-stereo",
+          "output:analog-surround-50+input:analog-surround-21",
+          "output:analog-surround-50+input:analog-surround-40",
+          "output:analog-surround-50+input:analog-surround-41",
+          "output:analog-surround-50+input:analog-surround-50",
+          "output:analog-surround-50+input:analog-surround-51",
+          "output:analog-surround-50+input:analog-surround-71",
+          "output:analog-surround-51",
+          "output:analog-surround-51+input:analog-stereo",
+          "output:analog-surround-51+input:analog-surround-21",
+          "output:analog-surround-51+input:analog-surround-40",
+          "output:analog-surround-51+input:analog-surround-41",
+          "output:analog-surround-51+input:analog-surround-50",
+          "output:analog-surround-51+input:analog-surround-51",
+          "output:analog-surround-51+input:analog-surround-71",
+          "output:analog-surround-71",
+          "output:analog-surround-71+input:analog-stereo",
+          "output:analog-surround-71+input:analog-surround-21",
+          "output:analog-surround-71+input:analog-surround-40",
+          "output:analog-surround-71+input:analog-surround-41",
+          "output:analog-surround-71+input:analog-surround-50",
+          "output:analog-surround-71+input:analog-surround-51",
+          "output:analog-surround-71+input:analog-surround-71"
+        ]
+      }
+    }
+  },
+  {
+    "index": 1549,
+    "name": "alsa_card.usb-_Jabra_Link_390_6CFBED5C5C34-00",
+    "driver": "alsa",
+    "owner_module": null,
+    "properties": {
+      "device.enum.api": "udev",
+      "device.api": "alsa",
+      "media.class": "Audio/Device",
+      "api.alsa.path": "hw:3",
+      "api.alsa.card": "3",
+      "api.alsa.card.name": "Jabra Link 390",
+      "api.alsa.card.longname": "Jabra Link 390 at usb-0000:00:14.0-7, full speed",
+      "device.plugged.usec": "221720409255",
+      "device.bus_path": "pci-0000:00:14.0-usb-0:7:1.0",
+      "sysfs.path": "/devices/pci0000:00/0000:00:14.0/usb3/3-7/3-7:1.0/sound/card3",
+      "device.bus-id": "usb-_Jabra_Link_390_6CFBED5C5C34-00",
+      "device.bus": "usb",
+      "device.subsystem": "sound",
+      "device.vendor.id": "0x0b0e",
+      "device.vendor.name": "GN Netcom",
+      "device.product.id": "0x2e51",
+      "device.product.name": "Jabra Link 390",
+      "device.serial": "_Jabra_Link_390_6CFBED5C5C34",
+      "device.name": "alsa_card.usb-_Jabra_Link_390_6CFBED5C5C34-00",
+      "device.description": "Jabra Link 390",
+      "device.nick": "Jabra Link 390",
+      "device.icon_name": "audio-card-analog-usb",
+      "api.alsa.use-acp": "true",
+      "api.acp.auto-profile": "true",
+      "api.acp.auto-port": "true",
+      "api.dbus.ReserveDevice1.Priority": "-20",
+      "api.alsa.split-enable": "true",
+      "device.profile": "output:analog-stereo+input:mono-fallback",
+      "api.dbus.ReserveDevice1": "Audio3",
+      "spa.object.id": "8",
+      "factory.id": "15",
+      "client.id": "49",
+      "object.id": "60",
+      "object.serial": "1549",
+      "object.path": "alsa:acp:J390",
+      "alsa.card": "3",
+      "alsa.card_name": "Jabra Link 390",
+      "alsa.long_card_name": "Jabra Link 390 at usb-0000:00:14.0-7, full speed",
+      "alsa.driver_name": "snd_usb_audio",
+      "alsa.mixer_name": "USB Mixer",
+      "alsa.components": "USB0b0e:2e51",
+      "alsa.id": "J390",
+      "device.string": "3"
+    },
+    "profiles": {
+      "off": {
+        "description": "Off",
+        "sinks": 0,
+        "sources": 0,
+        "priority": 0,
+        "available": true
+      },
+      "output:analog-stereo+input:mono-fallback": {
+        "description": "Analog Stereo Output + Mono Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 6501,
+        "available": true
+      },
+      "output:analog-stereo": {
+        "description": "Analog Stereo Output",
+        "sinks": 1,
+        "sources": 0,
+        "priority": 6500,
+        "available": true
+      },
+      "output:iec958-stereo+input:mono-fallback": {
+        "description": "Digital Stereo (IEC958) Output + Mono Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 5501,
+        "available": true
+      },
+      "output:iec958-stereo": {
+        "description": "Digital Stereo (IEC958) Output",
+        "sinks": 1,
+        "sources": 0,
+        "priority": 5500,
+        "available": true
+      },
+      "output:iec958-ac3-surround-51+input:mono-fallback": {
+        "description": "Digital Surround 5.1 (IEC958/AC3) Output + Mono Input",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 301,
+        "available": true
+      },
+      "output:iec958-ac3-surround-51": {
+        "description": "Digital Surround 5.1 (IEC958/AC3) Output",
+        "sinks": 1,
+        "sources": 0,
+        "priority": 300,
+        "available": true
+      },
+      "pro-audio": {
+        "description": "Pro Audio",
+        "sinks": 1,
+        "sources": 1,
+        "priority": 1,
+        "available": true
+      },
+      "input:mono-fallback": {
+        "description": "Mono Input",
+        "sinks": 0,
+        "sources": 1,
+        "priority": 1,
+        "available": true
+      }
+    },
+    "active_profile": "output:analog-stereo+input:mono-fallback",
+    "ports": {
+      "analog-input-headset-mic": {
+        "description": "Headset Microphone",
+        "type": "Headset",
+        "priority": 8800,
+        "latency_offset": "0 usec",
+        "availability_group": "",
+        "availability": "availability unknown",
+        "properties": {
+          "port.type": "headset",
+          "device.icon_name": "audio-input-microphone",
+          "card.profile.port": "0"
+        },
+        "profiles": [
+          "input:mono-fallback",
+          "output:analog-stereo+input:mono-fallback",
+          "output:iec958-stereo+input:mono-fallback",
+          "output:iec958-ac3-surround-51+input:mono-fallback"
+        ]
+      },
+      "analog-output": {
+        "description": "Analog Output",
+        "type": "Analog",
+        "priority": 9900,
+        "latency_offset": "0 usec",
+        "availability_group": "",
+        "availability": "availability unknown",
+        "properties": {
+          "port.type": "analog",
+          "card.profile.port": "1"
+        },
+        "profiles": [
+          "output:analog-stereo",
+          "output:analog-stereo+input:mono-fallback"
+        ]
+      },
+      "iec958-stereo-output": {
+        "description": "Digital Output (S/PDIF)",
+        "type": "SPDIF",
+        "priority": 0,
+        "latency_offset": "0 usec",
+        "availability_group": "",
+        "availability": "availability unknown",
+        "properties": {
+          "port.type": "spdif",
+          "card.profile.port": "2"
+        },
+        "profiles": [
+          "output:iec958-stereo",
+          "output:iec958-stereo+input:mono-fallback"
+        ]
+      }
+    }
+  },
+  {
+    "index": 7770,
+    "name": "alsa_card.usb-Anker_PowerConf_C200_Anker_PowerConf_C200_ACNV9P1E47205441-02",
+    "driver": "alsa",
+    "owner_module": null,
+    "properties": {
+      "device.enum.api": "udev",
+      "device.api": "alsa",
+      "media.class": "Audio/Device",
+      "api.alsa.path": "hw:1",
+      "api.alsa.card": "1",
+      "api.alsa.card.name": "Anker PowerConf C200",
+      "api.alsa.card.longname": "Anker PowerConf C200 Anker PowerConf C200 at usb-0000:00:14.0-3.1.1, high speed",
+      "device.plugged.usec": "486526565544",
+      "device.bus_path": "pci-0000:00:14.0-usb-0:3.1.1:1.2",
+      "sysfs.path": "/devices/pci0000:00/0000:00:14.0/usb3/3-3/3-3.1/3-3.1.1/3-3.1.1:1.2/sound/card1",
+      "device.bus-id": "usb-Anker_PowerConf_C200_Anker_PowerConf_C200_ACNV9P1E47205441-02",
+      "device.bus": "usb",
+      "device.subsystem": "sound",
+      "device.vendor.id": "0x291a",
+      "device.vendor.name": "Anker PowerConf C200",
+      "device.product.id": "0x3369",
+      "device.product.name": "Anker PowerConf C200",
+      "device.serial": "Anker_PowerConf_C200_Anker_PowerConf_C200_ACNV9P1E47205441",
+      "device.form_factor": "webcam",
+      "device.name": "alsa_card.usb-Anker_PowerConf_C200_Anker_PowerConf_C200_ACNV9P1E47205441-02",
+      "device.description": "Anker PowerConf C200",
+      "device.nick": "Anker PowerConf C200",
+      "device.icon_name": "camera-web-analog-usb",
+      "api.alsa.use-acp": "true",
+      "api.acp.auto-profile": "false",
+      "api.acp.auto-port": "false",
+      "api.dbus.ReserveDevice1.Priority": "-20",
+      "api.alsa.split-enable": "true",
+      "api.dbus.ReserveDevice1": "Audio1",
+      "spa.object.id": "4",
+      "factory.id": "15",
+      "client.id": "49",
+      "object.id": "140",
+      "object.serial": "7770",
+      "object.path": "alsa:acp:C200",
+      "alsa.card": "1",
+      "alsa.card_name": "Anker PowerConf C200",
+      "alsa.long_card_name": "Anker PowerConf C200 Anker PowerConf C200 at usb-0000:00:14.0-3.1.1, high speed",
+      "alsa.driver_name": "snd_usb_audio",
+      "alsa.mixer_name": "USB Mixer",
+      "alsa.components": "USB291a:3369",
+      "alsa.id": "C200",
+      "device.string": "1"
+    },
+    "profiles": {
+      "off": {
+        "description": "Off",
+        "sinks": 0,
+        "sources": 0,
+        "priority": 0,
+        "available": true
+      },
+      "input:analog-stereo": {
+        "description": "Analog Stereo Input",
+        "sinks": 0,
+        "sources": 1,
+        "priority": 65,
+        "available": true
+      },
+      "input:iec958-stereo": {
+        "description": "Digital Stereo (IEC958) Input",
+        "sinks": 0,
+        "sources": 1,
+        "priority": 55,
+        "available": true
+      },
+      "pro-audio": {
+        "description": "Pro Audio",
+        "sinks": 0,
+        "sources": 1,
+        "priority": 1,
+        "available": true
+      }
+    },
+    "active_profile": "input:analog-stereo",
+    "ports": {
+      "analog-input-mic": {
+        "description": "Microphone",
+        "type": "Mic",
+        "priority": 8700,
+        "latency_offset": "0 usec",
+        "availability_group": "",
+        "availability": "availability unknown",
+        "properties": {
+          "port.type": "mic",
+          "device.icon_name": "audio-input-microphone",
+          "card.profile.port": "0"
+        },
+        "profiles": [
+          "input:analog-stereo"
+        ]
+      },
+      "iec958-stereo-input": {
+        "description": "Digital Input (S/PDIF)",
+        "type": "SPDIF",
+        "priority": 0,
+        "latency_offset": "0 usec",
+        "availability_group": "",
+        "availability": "availability unknown",
+        "properties": {
+          "port.type": "spdif",
+          "card.profile.port": "1"
+        },
+        "profiles": [
+          "input:iec958-stereo"
+        ]
+      }
+    }
+  }
+]

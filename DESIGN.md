@@ -41,11 +41,11 @@ Quit
 ```
 
 - One entry per output/input *port*, not per sink: the PCI card exposes HDMI and
-  analog headphones on different profiles. Ports whose availability is
-  `not available` (e.g. headphone jack unplugged) are hidden; picking a port on an
-  inactive profile switches the card profile first.
-- Monitor sources (`*.monitor`) are never listed. The `snd_aloop` loopback card is
-  hidden by default and can be shown in Preferences.
+  analog headphones on different profiles. Ports already exposed by a device are
+  hidden only when `not available`; ports requiring a profile switch are listed
+  only when `available`, and selecting one switches the card profile first.
+- Monitor sources (`*.monitor`) are never listed. Any device, e.g. the `snd_aloop`
+  loopback card, can be hidden in Preferences (`hidden_devices`).
 - Apps lists running apps plus apps that have a saved route.
 
 ### Mixer window (left-click)
@@ -73,13 +73,13 @@ Quit
 
 | # | Decision | Why |
 |---|---|---|
-| D1 | One long-running process owns tray + mixer; second invocations talk to it over `$XDG_RUNTIME_DIR/audio-indicator.sock` (`audio-indicator toggle`, `show`, `quit`) | Today every Waybar click starts another instance; `launch.sh` PID logic is broken (trap never runs after `exec`, SIGUSR1 is ignored) |
-| D2 | Fyne 2.7 tray: `SetSystemTrayMenu` (submenus + checkmarks supported), `SetSystemTrayIcon`, `SetSystemTrayWindow(mixer)` for left-tap toggle; close button hides the window. The tray icon is the primary indicator; Waybar `custom/audio` stays only as a volume readout/scroll target whose click runs `audio-indicator toggle` | No new dependency; Waybar's tray renders SNI dbusmenu submenus (to be confirmed by V4). If the tray is unavailable, the app still runs and the mixer opens via `toggle` |
+| D1 | One long-running process owns tray + mixer; second invocations talk to it over `$XDG_RUNTIME_DIR/soundquay.sock` (`soundquay toggle`, `show`, `quit`) | Today every Waybar click starts another instance; `launch.sh` PID logic is broken (trap never runs after `exec`, SIGUSR1 is ignored) |
+| D2 | Fyne 2.7 tray: `SetSystemTrayMenu` (submenus + checkmarks supported), `SetSystemTrayIcon` with embedded PNGs (Fyne's Linux tray cannot decode SVG), and `fyne.io/systray.SetOnTapped` for left-tap toggle so tray, socket and close button share one visibility state; close button hides the window. The tray icon is the primary indicator; Waybar `custom/audio` stays only as a volume readout/scroll target whose click runs `soundquay toggle` | No new dependency (systray already ships with Fyne); Waybar's tray registers the item (checked on this machine; submenu rendering still to be checked by V4). If the tray is unavailable, the app still runs and the mixer opens via `toggle` |
 | D3 | Event-driven: one `pactl subscribe` child; on an event, wait 100 ms for more, then take one snapshot | Replaces ~30 process spawns every 2 s with ~6 spawns per actual change and zero when idle |
 | D4 | Snapshots read with `pactl -f json` (`info`, `list sinks`, `list sources`, `list sink-inputs`, `list source-outputs`, `list cards`) | Removes every regex parser; JSON already carries `application.*`, ports, availability, profiles |
 | D5 | All writes go through `pactl` (`set-default-*`, `set-card-profile`, `set-*-port`, `move-sink-input`, `move-source-output`, volume/mute). Each command reports its own success or failure to the coordinator; subscribe events only refresh state | Same path on PipeWire and PulseAudio. Hypothesis (V2/V3): on pipewire-pulse a move sets the stream's `target.object`, which WirePlumber honors. If V2/V3 fail, input moves on PipeWire switch to a `pw-metadata -n default <stream id> target.object <node name>` write, enabled only when `pw-metadata` exists |
 | D6 | Delete the `pw-cli`/`wpctl inspect` discovery path and the owner-guessing heuristics | Apps are identified only from a stream's own properties; guessing produced wrong labels and wrong preference keys |
-| D7 | Saved routes live in `~/.config/audio-indicator/config.json`, written by temp file + rename from the coordinator only | Visible, editable, deletable; no concurrent writers |
+| D7 | Saved routes live in `~/.config/soundquay/config.json`, written by temp file + rename from the coordinator only | Visible, editable, deletable; no concurrent writers |
 | D8 | Widgets are keyed (device name, app key) and updated in place; the tree is rebuilt only when the set of keys changes | Today a full rebuild every 2 s replaces sliders mid-drag |
 | D9 | A slider being dragged, or changed in the last 1 s, ignores incoming snapshot values for that slider only | Replaces the global 3 s grace period that rebuilds bypass |
 
@@ -146,7 +146,8 @@ Rules:
 
 `ApplyRoutes(view, routes, tracker) → []Move` is a pure function over the current
 state; the coordinator runs the moves and updates the tracker (stream index → state
-above). Stream indexes are never persisted.
+above). Stream indexes are never persisted. When a saved-route move fails, the
+coordinator calls `Tracker.Forget` for that stream, so the next snapshot plans it again.
 
 ## 5. Architecture
 
@@ -183,7 +184,7 @@ flowchart LR
 
 Removed: `pw-cli` parsing, recording-owner inference, `pipeWireBackend`,
 regex parsers, `preferences.go`, the advanced-stream CLI flags, `launch.sh`,
-`audio-indicator.service`.
+`soundquay.service`.
 
 ### Config
 
@@ -201,15 +202,15 @@ regex parsers, `preferences.go`, the advanced-stream CLI flags, `launch.sh`,
 
 ## 6. Desktop integration
 
-- Autostart: `exec audio-indicator` in the Sway config. Drop
-  `audio-indicator.service` (`WantedBy=default.target` can start before the Wayland
+- Autostart: `exec soundquay` in the Sway config. Drop
+  `soundquay.service` (`WantedBy=default.target` can start before the Wayland
   session exists).
-- Waybar `custom/audio`: `"on-click": "audio-indicator toggle"`. The status text keeps
+- Waybar `custom/audio`: `"on-click": "soundquay toggle"`. The status text keeps
   coming from `audiobar` (not part of this design).
 - Sway: `for_window [title="Audio Mixer"] floating enable, border none, move position mouse`.
   Today Waybar launches with `-title 'Audio Mixer'` while the rule matches
   `"Audio Indicator"`, so the window is not floated. Use one fixed title.
-- One binary location: `~/.local/bin/audio-indicator` (`go install`), instead of
+- One binary location: `~/.local/bin/soundquay` (`go install`), instead of
   the repo path in Sway and the separate copy in `~/.local/bin`.
 
 ## 7. Validation before building on an assumption

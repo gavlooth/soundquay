@@ -1,158 +1,123 @@
-# Audio Indicator - Fyne Audio Popup
+# Audio Indicator
 
-A Fyne-based GUI application that replicates EWW audio indicator functionality for Wayland compositors (Sway, Hyprland, etc).
+A single-process tray switcher and audio mixer for Sway + Waybar and PipeWire
+through pipewire-pulse. It also works with a PulseAudio server that supports
+`pactl -f json`. See [DESIGN.md](DESIGN.md) for the device, app identity, and saved
+route rules.
 
-## Features
+## Install
 
-- **Main Volume Control**: Slider with 5% increments and mute toggle
-- **Output Device Selection**: List of available audio sinks with default indicator
-- **Microphone Control**: Volume slider and mute toggle for microphone
-- **Input Device Selection**: List of available audio sources
-- **Per-App Audio Routing**:
-  - Volume slider for each playing application
-  - Mute toggle per application
-  - Device selection dropdown (click ▼ to expand)
-  - Click any output device to move app's audio
-- **Recording Applications**: Control for microphone-using applications
-- **Dark Theme**: Matches EWW dark theme (#3a3a3a background, #7aa2d4 accent)
-- **Real-time Updates**: Background polling updates audio status every 2 seconds
+Requires Go 1.25.5+, Fyne 2.7.2's Linux build dependencies (C compiler, OpenGL and
+X11 development libraries), and `pactl`. Waybar must include its `tray` module.
+The Fyne Linux desktop driver uses XWayland on Sway.
 
-## Installation
-
-```bash
-cd /home/heefoo/audio-indicator
-go build -o audio-indicator
+```sh
+mkdir -p ~/.local/bin
+go build -o ~/.local/bin/soundquay .
 ```
+
+Ensure `~/.local/bin` is in the desktop session's `PATH`. Use this installed copy
+in Sway and Waybar, rather than the old repository binary or launch script.
 
 ## Usage
 
-### Standalone
-```bash
-./audio-indicator
+```sh
+soundquay          # start the tray; an existing instance shows its mixer
+soundquay toggle   # show/hide the existing mixer
+soundquay show     # show and focus the existing mixer
+soundquay quit     # stop the existing process
+soundquay snapshot # JSON {"snapshot": ..., "view": ...}; no GUI startup
 ```
 
-### Diagnostics
-```bash
-./audio-indicator -diagnostics
+`toggle`, `show`, and `quit` exit with a message and status 1 if no instance is
+running. The process listens on `$XDG_RUNTIME_DIR/soundquay.sock`; a stale
+socket is replaced on startup. Command replies are `ok` followed by a newline.
+
+Right-click the tray icon for Output/Input device ports, app routes, output and
+microphone mute, the mixer, preferences, or Quit. The tray icon reflects output
+mute. Left-click toggles the mixer. Closing either window hides it; Quit stops the
+process. If the tray is unavailable, the socket commands still open the mixer.
+
+The mixer uses 0–150% sliders, mute buttons, default-device dropdowns, and one row
+per running app. Each app has an Out line and an In line, each with its own
+volume, mute and device picker; the In picker is shown even before the app records,
+so a microphone can be chosen in advance. Out/In
+choices save separate routes; `Follow default` deletes that direction's route and
+moves its live streams to the current default. `saved` identifies saved choices.
+When a stream is on a different device than its saved one (or than the default,
+when it follows the default), the line says where it really is. **Reset apps**
+(header, asks first) forgets every saved app device and sends every app's streams
+to the current default output and input.
+Unavailable route targets remain visible. Saved routes for apps that are not
+running have Delete buttons. Streams with no stable application identity can
+change volume/mute but cannot save a route.
+
+A saved route is applied once to a new stream, or later when its device returns
+if nobody has moved that stream meanwhile. External app moves are not repeatedly
+undone. Default changes leave routed apps alone; WirePlumber handles default
+following for unrouted apps. Selecting a port on an inactive card profile changes
+the profile, finds the resulting device, selects its port, and changes the default.
+
+Preferences lists all non-monitor devices, including hidden ones. Hide and
+nicknames are persisted; press Enter or Save for a nickname. A hidden current
+default remains in the switcher. Preferences also lists every saved route for
+deletion. Settings live at `~/.config/soundquay/config.json` (or the
+corresponding `$XDG_CONFIG_HOME` path) and are written using a synced temporary
+file and rename. Unsupported config versions are errors, not silently replaced.
+
+Snapshots follow `pactl subscribe` events, collected for 100 ms per refresh, with
+no idle polling. Slider writes wait 50 ms after the latest value. Snapshot values
+do not replace an active drag or a slider edit made in the previous second.
+Command errors appear as one line at the bottom of the mixer and on stderr.
+
+## Desktop integration
+
+Edit these files yourself; the application does not modify desktop settings.
+Remove the old `launch.sh`/repository-path invocation and old
+`soundquay.service` autostart (disable the old user service if installed).
+
+In `~/.config/sway/config`:
+
+```sway
+exec soundquay
+for_window [title="Audio Mixer"] floating enable, border none, move position mouse
+bindsym $mod+Shift+a exec soundquay toggle
 ```
 
-This prints backend capabilities, command probes, current audio status, saved preferred recording sources, discovered PipeWire source nodes, discovered active recording streams, likely recording-related PipeWire clients, and an inferred candidate list for each active recording stream as JSON.
+In the Waybar configuration, keep `tray` in the module list. Change the existing
+`custom/audio` click action to exactly:
 
-### Move a Live Recording Stream
-```bash
-./audio-indicator -move-advanced-stream-id 36 -move-advanced-stream-source alsa_input.usb-_Jabra_Link_390_6CFBED5C5C34-00.mono-fallback
+```json
+"on-click": "soundquay toggle"
 ```
 
-This applies the move through the same WirePlumber-aware path the GUI uses, then prints a fresh diagnostics snapshot.
+For example, keep the existing volume readout and scroll actions, replacing only
+the click command:
 
-### Save and Apply Preferred Recording Sources
-```bash
-./audio-indicator -set-preferred-recording-app "Echo-Cancel Capture" -set-preferred-recording-source alsa_input.usb-_Jabra_Link_390_6CFBED5C5C34-00.mono-fallback
-./audio-indicator -apply-preferred-recording-sources
-```
-
-The first command updates the saved preference file. The second applies saved preferred sources to any currently matching live recording streams, then prints diagnostics.
-
-### Watch Recording State
-```bash
-./audio-indicator -watch-recording-state
-```
-
-This polls every 2 seconds and only prints when the active recording streams, inferred owner candidates, or saved preferred sources change. It is intended for validating behavior across a restarted recording session.
-
-### Manual Validation
-1. Start a recording app and make it request microphone access.
-2. Run `./audio-indicator -diagnostics`.
-3. Confirm the app appears under `advanced_streams` or `status.mic_streams`.
-   If the session manager exposes a filter-owned stream instead of the app directly, check `recording_client_candidates` for likely app-side clients such as `Google Chrome input` or `WEBRTC VoiceEngine`.
-4. Use the GUI to set a preferred source for that app.
-5. Run `./audio-indicator -diagnostics` again and confirm `preferred_recording_sources` contains the app name and source.
-6. Stop and restart the app's recording session, then confirm the preferred source is reapplied.
-
-### Integration with Status Bar (Waybar, EWW, etc.)
-
-**Waybar example** (`~/.config/waybar/config.jsonc`):
 ```json
 "custom/audio": {
   "exec": "~/.config/eww/tools/audiobar status waybar",
-  "on-click": "/home/heefoo/audio-indicator/audio-indicator &",
+  "on-click": "soundquay toggle",
   "signal": 10
 }
 ```
 
-**EWW example** (`eww.yuck`):
-```yuck
-(button :onclick "/home/heefoo/audio-indicator/audio-indicator &"
-  (label :text "󰕾"))
+`audiobar` is separate from this project. The fixed mixer title is `Audio Mixer`;
+there are no title or advanced recording CLI flags.
+
+## Development
+
+- `internal/pulse`: JSON snapshots, subscribe process/restarts, audio writes.
+- `internal/model`: app identity, switch entries, view, config, stream route tracker.
+- `coordinator.go`: one state owner, non-blocking inbox, snapshot refreshes and writes.
+- `tray.go`, `mixer.go`, `prefs.go`: tray rendering and keyed Fyne widgets.
+- `instance.go`, `main.go`: Unix socket, CLI, application startup/shutdown.
+- `icons/`: embedded static volume/mute PNG icons for the tray.
+
+```sh
+go vet ./...
+go test -race ./...
 ```
 
-**Sway keybinding** (`~/.config/sway/config`):
-```conf
-bindsym $mod+Shift+a exec /home/heefoo/audio-indicator/audio-indicator
-```
-
-## Audio Backend
-
-Supports both:
-- **PipeWire** (via `wpctl` and `pactl`)
-- **PulseAudio** (via `pactl`)
-
-The application automatically detects which is available.
-
-When PipeWire and WirePlumber metadata are available, `Applications Recording` distinguishes between:
-- **Current source**: the live source attached to an active recording stream right now
-- **Preferred source**: the saved source the app will try to reapply when that recording app creates a matching capture stream again
-
-If no live recording stream exists yet, the preferred source is deferred until the next matching active capture stream appears.
-
-## Dependencies
-
-- Go 1.19+
-- Fyne 2.7+
-- PipeWire or PulseAudio
-
-```bash
-go get fyne.io/fyne/v2
-```
-
-## Building
-
-Standard build:
-```bash
-go build
-```
-
-Release build (optimized):
-```bash
-go build -ldflags="-s -w" -o audio-indicator
-```
-
-## Files
-
-- `main.go` - Fyne GUI implementation
-- `audio.go` - Audio management functions (PulseAudio/PipeWire)
-- `go.mod` - Go module dependencies
-
-## Key Differences from EWW
-
-1. **Native GUI**: Fyne provides native widgets instead of EWW's DOM-based rendering
-2. **Independent**: Doesn't require EWW daemon running
-3. **Scroll Support**: To be implemented (currently uses slider drag)
-4. **Click-to-Expand**: Per-app device dropdowns work the same as EWW
-
-## Nerd Font Icons Used
-
-| Icon | Purpose |
-|-------|---------|
-| 󰕾 | Audio / Volume (unmuted) |
-| 󰝟 | Volume (muted) |
-| 󰍬 | Microphone (unmuted) |
-| 󰍭 | Microphone (muted) |
-| 󰐵 | Default device |
-| 󰐶 | Non-default device |
-| 󰅖 | Close button |
-| ▼ / ▲ | Expand/collapse dropdown |
-
-## License
-
-Same as EWW configuration - personal use.
+Tests focus on transitions, command errors, config persistence, burst refreshes,
+slider edits, stream routing, profile switching, and socket behavior.
