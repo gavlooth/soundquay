@@ -2,6 +2,9 @@ package model
 
 import "soundquay/internal/pulse"
 
+// unlinkedDevice is the device index pactl reports for a stream not yet connected to a device.
+const unlinkedDevice = 4294967295
+
 type streamID struct {
 	direction pulse.Direction
 	index     uint32
@@ -51,6 +54,11 @@ func (t *Tracker) Plan(s pulse.Snapshot, routes []Route) []Move {
 			if state.done {
 				t.streams[id] = state
 				continue
+			}
+			// A stream can appear before it is linked (device index 4294967295); getting
+			// its first real device then is not a move by someone else.
+			if exists && state.device == unlinkedDevice {
+				state.device = stream.DeviceIndex
 			}
 			if !isApp(stream.HasOwner, stream.Properties) || exists && stream.DeviceIndex != state.device {
 				state.done = true

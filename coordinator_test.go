@@ -21,9 +21,11 @@ import (
 type fakeAudio struct {
 	mu       sync.Mutex
 	snapshot pulse.Snapshot
-	events   chan pulse.Event
-	calls    []string
-	failures map[string]error
+	// laterSnapshots, when set, are returned one per Snapshot call before snapshot.
+	laterSnapshots []pulse.Snapshot
+	events         chan pulse.Event
+	calls          []string
+	failures       map[string]error
 }
 
 func (f *fakeAudio) record(call string) error {
@@ -39,7 +41,15 @@ func (f *fakeAudio) callLog() []string {
 }
 func (f *fakeAudio) Subscribe(context.Context) <-chan pulse.Event { return f.events }
 func (f *fakeAudio) Snapshot(context.Context) (pulse.Snapshot, error) {
-	return f.snapshot, f.record("snapshot")
+	err := f.record("snapshot")
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if len(f.laterSnapshots) > 0 {
+		s := f.laterSnapshots[0]
+		f.laterSnapshots = f.laterSnapshots[1:]
+		return s, err
+	}
+	return f.snapshot, err
 }
 func (f *fakeAudio) SetDefault(_ context.Context, d pulse.Direction, name string) error {
 	return f.record(fmt.Sprintf("default:%d:%s", d, name))
@@ -186,10 +196,43 @@ func TestProfileSelectionStopsAfterFailure(t *testing.T) {
 	if !errors.Is(err, failure) || len(fake.calls) != 1 {
 		t.Fatalf("error %v, calls %v", err, fake.calls)
 	}
-	fake = &fakeAudio{}
-	err = selectSwitchEntry(context.Background(), fake, model.SwitchEntry{CardName: "card", Profile: "analog", PortName: "missing"})
-	if err == nil || !reflect.DeepEqual(fake.calls, []string{"profile:card:analog", "snapshot"}) {
-		t.Fatalf("error %v, calls %v", err, fake.calls)
+	synctest.Test(t, func(t *testing.T) {
+		fake := &fakeAudio{}
+		err := selectSwitchEntry(context.Background(), fake, model.SwitchEntry{CardName: "card", Profile: "analog", PortName: "missing"})
+		calls := fake.callLog()
+		if err == nil || calls[0] != "profile:card:analog" || len(calls) < 3 || slices.ContainsFunc(calls[1:], func(c string) bool { return c != "snapshot" }) {
+			t.Fatalf("error %v, calls %v (want profile switch, then only snapshots until giving up)", err, calls)
+		}
+	})
+}
+func TestProfileSelectionWaitsForDeviceToAppear(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		device := pulse.Device{Name: "headset", CardName: "card", ActivePort: "headphones", Ports: []pulse.DevicePort{{Name: "headphones"}}}
+		fake := &fakeAudio{laterSnapshots: []pulse.Snapshot{{}, {}}, snapshot: pulse.Snapshot{Sinks: []pulse.Device{device}}}
+		entry := model.SwitchEntry{CardName: "card", PortName: "headphones", Profile: "analog"}
+		if err := selectSwitchEntry(context.Background(), fake, entry); err != nil {
+			t.Fatal(err)
+		}
+		want := []string{"profile:card:analog", "snapshot", "snapshot", "snapshot", "default:0:headset"}
+		if got := fake.callLog(); !reflect.DeepEqual(got, want) {
+			t.Fatalf("calls %v, want %v", got, want)
+		}
+	})
+}
+func TestVolumeAndMuteChangesClearTheErrorLine(t *testing.T) {
+	for _, msg := range []Msg{
+		SetMuted{Direction: pulse.Output, Muted: true},
+		VolumeChanged{Key: "output", Direction: pulse.Output, Value: 40},
+	} {
+		c := newCoordinator(&fakeAudio{}, "", model.Config{Version: model.ConfigVersion}, nil)
+		c.lastError = "Move app: no such stream"
+		c.handle(context.Background(), msg)
+		for _, v := range c.volumes {
+			v.timer.Stop()
+		}
+		if c.lastError != "" {
+			t.Fatalf("%T kept error %q", msg, c.lastError)
+		}
 	}
 }
 func TestProfileSelectionSkipsCurrentPort(t *testing.T) {

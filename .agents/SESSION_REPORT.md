@@ -91,3 +91,10 @@ Signature: omp/claude-opus-5-5
 - Header drag: `MouseDown` fires and `_NET_WM_MOVERESIZE` is sent (debug log), but a Sway-seat simulated drag did not move the window; user said the UI is fine, so left as is.
 
 Signature: omp/claude-opus-5-5
+
+## 2026-10-14 — Defect hunt (4 parallel reviewers)
+
+- Slices: pulse (no findings), model, coordinator/instance/main, UI (no findings).
+- Fixed: (1) a routed stream that first appears unlinked (device 4294967295) and then gets linked was treated as moved by the user, so its saved device was never applied when it appeared later — tracker now treats the unlinked index as unknown; (2) choosing a port that needs a profile switch failed if the new sink/source appeared a moment after the switch — now looks for it every 100 ms for up to 2 s; (3) volume and mute changes now clear an old error line like other user changes. Tests added for each; suite passes; installed and restarted.
+
+Signature: omp/claude-opus-5-5

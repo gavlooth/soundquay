@@ -406,6 +406,11 @@ func (c *coordinator) handle(ctx context.Context, msg Msg) {
 		}
 		c.persist(cfg)
 	case VolumeChanged:
+		if c.lastError != "" {
+			// A new user change clears the previous failure from the error line.
+			c.lastError = ""
+			c.publish()
+		}
 		if old, ok := c.volumes[m.Key]; ok {
 			old.timer.Stop()
 		}
@@ -434,6 +439,7 @@ func (c *coordinator) handle(ctx context.Context, msg Msg) {
 		}
 		return
 	case SetMuted:
+		c.report("Set mute", nil)
 		if m.App == "" {
 			target := c.defaultDevice(m.Direction)
 			if target != "" {
@@ -456,28 +462,22 @@ func selectSwitchEntry(ctx context.Context, client audioClient, entry model.Swit
 		if err := client.SetCardProfile(ctx, entry.CardName, entry.Profile); err != nil {
 			return err
 		}
-		s, err := client.Snapshot(ctx)
-		if err != nil {
-			return err
-		}
-		devices := s.Sinks
-		if entry.Direction == pulse.Input {
-			devices = s.Sources
-		}
-		target = ""
-		for _, device := range devices {
-			if device.CardName != entry.CardName {
-				continue
+		// The server creates the card's new sink or source shortly after the profile
+		// switch; look for it for at most profileDeviceWait.
+		deadline := time.Now().Add(profileDeviceWait)
+		for {
+			s, err := client.Snapshot(ctx)
+			if err != nil {
+				return err
 			}
-			for _, port := range device.Ports {
-				if port.Name == entry.PortName {
-					target = device.Name
-					needsPort = device.ActivePort != entry.PortName
-					break
-				}
-			}
-			if target != "" {
+			target, needsPort = findPortDevice(s, entry)
+			if target != "" || !time.Now().Before(deadline) {
 				break
+			}
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(profileDevicePoll):
 			}
 		}
 	}
@@ -490,4 +490,29 @@ func selectSwitchEntry(ctx context.Context, client audioClient, entry model.Swit
 		}
 	}
 	return client.SetDefault(ctx, entry.Direction, target)
+}
+
+const (
+	profileDeviceWait = 2 * time.Second
+	profileDevicePoll = 100 * time.Millisecond
+)
+
+// findPortDevice returns the device on the entry's card that has the entry's port,
+// and whether that port still has to be made active.
+func findPortDevice(s pulse.Snapshot, entry model.SwitchEntry) (name string, needsPort bool) {
+	devices := s.Sinks
+	if entry.Direction == pulse.Input {
+		devices = s.Sources
+	}
+	for _, device := range devices {
+		if device.CardName != entry.CardName {
+			continue
+		}
+		for _, port := range device.Ports {
+			if port.Name == entry.PortName {
+				return device.Name, device.ActivePort != entry.PortName
+			}
+		}
+	}
+	return "", false
 }

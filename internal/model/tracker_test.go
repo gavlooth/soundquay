@@ -50,6 +50,21 @@ func TestTrackerWaitsForDeviceAndMovesOnce(t *testing.T) {
 	expectMoves(t, tracker.Plan(s, routes))
 }
 
+func TestTrackerStreamLinkedAfterAppearingStillWaitsForDevice(t *testing.T) {
+	s := machineSnapshot()
+	jabra := s.Sinks[1]
+	s.Sinks = append(s.Sinks[:1], s.Sinks[2:]...)
+	s.Outputs = []pulse.Stream{chromeStream(pulse.Output, 200, unlinkedDevice)}
+	routes := []Route{{App: "chrome", Direction: RouteOutput, Device: jabraSink}}
+	tracker := NewTracker()
+	expectMoves(t, tracker.Plan(s, routes))
+	s.Outputs[0].DeviceIndex = 77 // the server links it to the default sink
+	expectMoves(t, tracker.Plan(s, routes))
+	jabra.Index = 500
+	s.Sinks = append(s.Sinks, jabra)
+	expectMoves(t, tracker.Plan(s, routes), Move{Direction: pulse.Output, StreamIndex: 200, DeviceName: jabraSink})
+}
+
 func TestTrackerWaitingStreamMovedElsewhereIsLeftAlone(t *testing.T) {
 	for _, appearsImmediately := range []bool{false, true} {
 		t.Run(map[bool]string{false: "external move before device", true: "external move with device"}[appearsImmediately], func(t *testing.T) {
