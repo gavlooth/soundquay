@@ -31,6 +31,44 @@ go build -o audio-indicator
 ./audio-indicator
 ```
 
+### Diagnostics
+```bash
+./audio-indicator -diagnostics
+```
+
+This prints backend capabilities, command probes, current audio status, saved preferred recording sources, discovered PipeWire source nodes, discovered active recording streams, likely recording-related PipeWire clients, and an inferred candidate list for each active recording stream as JSON.
+
+### Move a Live Recording Stream
+```bash
+./audio-indicator -move-advanced-stream-id 36 -move-advanced-stream-source alsa_input.usb-_Jabra_Link_390_6CFBED5C5C34-00.mono-fallback
+```
+
+This applies the move through the same WirePlumber-aware path the GUI uses, then prints a fresh diagnostics snapshot.
+
+### Save and Apply Preferred Recording Sources
+```bash
+./audio-indicator -set-preferred-recording-app "Echo-Cancel Capture" -set-preferred-recording-source alsa_input.usb-_Jabra_Link_390_6CFBED5C5C34-00.mono-fallback
+./audio-indicator -apply-preferred-recording-sources
+```
+
+The first command updates the saved preference file. The second applies saved preferred sources to any currently matching live recording streams, then prints diagnostics.
+
+### Watch Recording State
+```bash
+./audio-indicator -watch-recording-state
+```
+
+This polls every 2 seconds and only prints when the active recording streams, inferred owner candidates, or saved preferred sources change. It is intended for validating behavior across a restarted recording session.
+
+### Manual Validation
+1. Start a recording app and make it request microphone access.
+2. Run `./audio-indicator -diagnostics`.
+3. Confirm the app appears under `advanced_streams` or `status.mic_streams`.
+   If the session manager exposes a filter-owned stream instead of the app directly, check `recording_client_candidates` for likely app-side clients such as `Google Chrome input` or `WEBRTC VoiceEngine`.
+4. Use the GUI to set a preferred source for that app.
+5. Run `./audio-indicator -diagnostics` again and confirm `preferred_recording_sources` contains the app name and source.
+6. Stop and restart the app's recording session, then confirm the preferred source is reapplied.
+
 ### Integration with Status Bar (Waybar, EWW, etc.)
 
 **Waybar example** (`~/.config/waybar/config.jsonc`):
@@ -60,6 +98,12 @@ Supports both:
 - **PulseAudio** (via `pactl`)
 
 The application automatically detects which is available.
+
+When PipeWire and WirePlumber metadata are available, `Applications Recording` distinguishes between:
+- **Current source**: the live source attached to an active recording stream right now
+- **Preferred source**: the saved source the app will try to reapply when that recording app creates a matching capture stream again
+
+If no live recording stream exists yet, the preferred source is deferred until the next matching active capture stream appears.
 
 ## Dependencies
 
