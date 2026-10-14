@@ -83,3 +83,11 @@ Signature: omp/claude-opus-5-5
 - Verified: build/tests pass; screenshot approved by user. Dragging not verifiable here (no way to inject a Wayland pointer press); if Sway ignores the move request, fallback is `border normal` in the Sway rule.
 
 Signature: omp/claude-opus-5-5
+
+## 2026-10-14 — Published to github.com/gavlooth/soundquay
+
+- Created public repo `gavlooth/soundquay` (matching the public `audio-indicator`), remotes: `origin` → soundquay, `audio-indicator` → old repo. Pushed `main` (eace2cab).
+- GitHub push protection blocked the first push: the unpushed WIP change carried a GitHub PAT in `.claude/settings.local.json` (lines 23–24). Fixed by restoring that file in the WIP change to its already-public version from `main@audio-indicator` (no token), untracking it in the rewrite change and ignoring `/.claude/`. The local file keeps its content on disk. The token never reached GitHub; it still sits in the local file and should be rotated.
+- Header drag: `MouseDown` fires and `_NET_WM_MOVERESIZE` is sent (debug log), but a Sway-seat simulated drag did not move the window; user said the UI is fine, so left as is.
+
+Signature: omp/claude-opus-5-5
