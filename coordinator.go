@@ -43,6 +43,16 @@ type ChooseAppDevice struct {
 
 func (ChooseAppDevice) isMsg() {}
 
+// ChooseStreamDevice moves one live playback stream without changing saved routes.
+// An empty Device selects the current default output for this move only.
+type ChooseStreamDevice struct {
+	App    string
+	Index  uint32
+	Device string
+}
+
+func (ChooseStreamDevice) isMsg() {}
+
 type DeleteRoute struct{ App, Direction string }
 
 func (DeleteRoute) isMsg() {}
@@ -354,6 +364,23 @@ func (c *coordinator) handle(ctx context.Context, msg Msg) {
 		for _, stream := range streams(a, m.Direction) {
 			c.write("Move "+a.Name, func(ctx context.Context) error { return c.client.MoveStream(ctx, m.Direction, stream.Index, target) })
 		}
+	case ChooseStreamDevice:
+		a, ok := c.app(m.App)
+		if !ok || !slices.ContainsFunc(a.Outputs, func(stream model.AppStream) bool { return stream.Index == m.Index }) {
+			break
+		}
+		target := m.Device
+		if target == "" {
+			target = c.view.DefaultOutput
+		}
+		if target == "" {
+			c.report("Move stream", fmt.Errorf("no default device"))
+			break
+		}
+		c.report("Move stream", nil)
+		c.write("Move "+a.Name+" stream", func(ctx context.Context) error {
+			return c.client.MoveStream(ctx, pulse.Output, m.Index, target)
+		})
 	case ResetApps:
 		cfg := c.config
 		cfg.Routes = nil

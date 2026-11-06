@@ -67,6 +67,15 @@ func trayKey(view model.View) string {
 		add(a.InputRoute)
 		add(strconv.FormatBool(a.Routable))
 		add(strconv.FormatBool(len(a.Inputs) > 0 || a.InputRoute != ""))
+		add(strconv.FormatBool(a.SeparateOutputs))
+		if a.SeparateOutputs {
+			add(strconv.Itoa(len(a.Outputs)))
+			for _, stream := range a.Outputs {
+				add(strconv.FormatUint(uint64(stream.Index), 10))
+				add(stream.MediaName)
+				add(stream.DeviceName)
+			}
+		}
 	}
 	add(strconv.FormatBool(view.OutputMute))
 	add(strconv.FormatBool(view.InputMute))
@@ -105,6 +114,9 @@ func (t *tray) update(view model.View) {
 		if len(a.Inputs) > 0 || a.InputRoute != "" {
 			directions = append(directions, t.appChoices(a, pulse.Input, view.InputDevices, a.InputRoute))
 		}
+		if a.SeparateOutputs && len(a.Outputs) > 0 {
+			directions = append(directions, t.streamChoices(a, view.OutputDevices))
+		}
 		item := fyne.NewMenuItem(a.Name, nil)
 		item.ChildMenu = fyne.NewMenu(a.Name, directions...)
 		appItems = append(appItems, item)
@@ -142,5 +154,27 @@ func (t *tray) appChoices(a model.App, d pulse.Direction, choices []model.Device
 	}
 	result := fyne.NewMenuItem(title, nil)
 	result.ChildMenu = fyne.NewMenu(title, items...)
+	return result
+}
+
+func (t *tray) streamChoices(a model.App, choices []model.DeviceChoice) *fyne.MenuItem {
+	streams := make([]*fyne.MenuItem, 0, len(a.Outputs))
+	for _, stream := range a.Outputs {
+		names, labels := streamChoiceOptions(choices, stream.DeviceName)
+		items := make([]*fyne.MenuItem, 0, len(names))
+		for i, name := range names {
+			item := fyne.NewMenuItem(labels[i], func() {
+				t.dispatch(ChooseStreamDevice{App: a.Key, Index: stream.Index, Device: name})
+			})
+			item.Checked = name == stream.DeviceName
+			items = append(items, item)
+		}
+		label := outputStreamLabel(stream)
+		item := fyne.NewMenuItem(label, nil)
+		item.ChildMenu = fyne.NewMenu(label, items...)
+		streams = append(streams, item)
+	}
+	result := fyne.NewMenuItem("Output streams", nil)
+	result.ChildMenu = fyne.NewMenu("Output streams", streams...)
 	return result
 }

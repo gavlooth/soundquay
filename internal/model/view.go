@@ -94,6 +94,7 @@ func Build(s pulse.Snapshot, c Config) View {
 			item := AppStream{Direction: direction, Index: stream.Index, DeviceName: names[stream.DeviceIndex], VolumePct: stream.VolumePct, Mute: stream.Mute, MediaName: stream.Properties["media.name"]}
 			if direction == pulse.Output {
 				app.Outputs = append(app.Outputs, item)
+				app.SeparateOutputs = app.SeparateOutputs || separateBrowserOutputs(stream.Properties)
 			} else {
 				app.Inputs = append(app.Inputs, item)
 			}

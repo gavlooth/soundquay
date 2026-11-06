@@ -63,7 +63,8 @@ Quit
   Firefox         Out → Odyssey G5 (HDMI)                    ✕
 ```
 
-- One row per app, not per stream. The slider sets every stream of that app.
+- One row per app, with individual live output pickers below Helium,
+  Chrome/Chromium, and Firefox. The app slider still sets every stream of that app.
 - `widget.Select` dropdowns replace the expand/collapse button lists.
 - `saved` marks a saved route; picking "Follow default" deletes it.
 - Saved routes for apps that are not running are listed with a delete button.
@@ -104,6 +105,10 @@ Display name = `application.name` of the most recent stream for that key.
 Streams with no `application.*` properties get key `node:<node.name>` and are shown
 under Apps as-is, but routes cannot be saved for them (no stable identity).
 
+Browser playback streams keep their individual output indexes within the app
+row. Their labels show those indexes and optional `media.name`; neither identifies
+a tab reliably. Stream output choices are live moves, never config identities.
+
 **Not apps**: streams with `owner_module != null` or `node.virtual = true`
 (loopbacks, echo-cancel, filter-chain internals). If a filter exposes a source
 (e.g. echo-cancel), that source is listed as an input device; its own capture stream
@@ -116,6 +121,12 @@ Route { appKey, displayName, direction: output|input, device: node name }
 ```
 
 No route = follow the default device.
+
+A browser stream output choice moves only the selected live output index after
+checking it still belongs to that app. **Default output** moves it to the current
+default once. No app route is added, deleted, or changed. Existing streams are not
+pulled back to a saved route after a manual stream move; recreated streams use the
+normal app route rules.
 
 ```mermaid
 stateDiagram-v2

@@ -3,6 +3,7 @@ package model
 import (
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 
 	"soundquay/internal/pulse"
@@ -136,6 +137,75 @@ func TestBuildGroupsLiveAndSavedApps(t *testing.T) {
 	}
 	if v.Apps[3].Routable || !v.Apps[3].Running || v.Apps[3].Name != "Raw sound" {
 		t.Fatalf("unidentified stream: %+v", v.Apps[3])
+	}
+}
+
+func TestBuildKeepsBrowserOutputsDistinct(t *testing.T) {
+	s := machineSnapshot()
+	first := chromeStream(pulse.Output, 200, 88)
+	first.Properties["media.name"] = "Music"
+	second := chromeStream(pulse.Output, 201, 77)
+	second.Properties["media.name"] = "Video"
+	second.VolumePct, second.Mute = 40, true
+	s.Outputs = []pulse.Stream{second, first}
+	s.Inputs = []pulse.Stream{chromeStream(pulse.Input, 210, 91)}
+	v := Build(s, Config{})
+	if len(v.Apps) != 1 {
+		t.Fatalf("browser grouping changed: %+v", v.Apps)
+	}
+	app := v.Apps[0]
+	want := []AppStream{
+		{Direction: pulse.Output, Index: 200, DeviceName: jabraSink, VolumePct: 105, MediaName: "Music"},
+		{Direction: pulse.Output, Index: 201, DeviceName: hdmiSink, VolumePct: 40, Mute: true, MediaName: "Video"},
+	}
+	if app.Key != "chrome" || !app.SeparateOutputs || !reflect.DeepEqual(app.Outputs, want) || len(app.Inputs) != 1 {
+		t.Fatalf("browser streams: %+v", app)
+	}
+}
+
+func TestBuildRecognizesBrowserOutputIdentities(t *testing.T) {
+	tests := []struct {
+		property string
+		names    []string
+	}{
+		{"application.id", []string{"net.imput.helium", "com.google.Chrome", "org.chromium.Chromium", "org.mozilla.firefox"}},
+		{"application.process.binary", []string{"helium", "helium-browser", "chrome", "google-chrome", "google-chrome-stable", "chromium", "chromium-browser", "firefox", "firefox-esr", "/usr/bin/firefox"}},
+		{"application.name", []string{"Helium", "Chrome", "Google Chrome", "Chromium", "Firefox", "Mozilla Firefox"}},
+	}
+	for _, tt := range tests {
+		for _, name := range tt.names {
+			for _, value := range []string{name, strings.ToUpper(name), " " + name + " "} {
+				t.Run(tt.property+"/"+value, func(t *testing.T) {
+					props := map[string]string{tt.property: value}
+					s := pulse.Snapshot{Outputs: []pulse.Stream{{Index: 10, Properties: props}}}
+					v := Build(s, Config{})
+					if len(v.Apps) != 1 || !v.Apps[0].SeparateOutputs || v.Apps[0].Key != value {
+						t.Fatalf("browser detection changed identity or missed output: %+v", v.Apps)
+					}
+				})
+			}
+		}
+	}
+}
+
+func TestBuildOnlySeparatesSupportedBrowserPlayback(t *testing.T) {
+	for _, name := range []string{"Spotify", "My Firefox Player", "helium-helper", "not-google-chrome", "org.mozilla.firefox.Other", "org.chromium.ChromiumExtra", "net.imput.helium.other", "brave", ""} {
+		t.Run(name, func(t *testing.T) {
+			props := map[string]string{"application.id": name, "application.process.binary": name, "application.name": name}
+			v := Build(pulse.Snapshot{Outputs: []pulse.Stream{{Index: 10, Properties: props}}}, Config{})
+			if len(v.Apps) != 1 || v.Apps[0].SeparateOutputs {
+				t.Fatalf("ordinary app has separate browser outputs: %+v", v.Apps)
+			}
+		})
+	}
+	props := map[string]string{"application.id": "org.mozilla.firefox"}
+	v := Build(pulse.Snapshot{Inputs: []pulse.Stream{{Index: 10, Properties: props}}}, Config{})
+	if len(v.Apps) != 1 || v.Apps[0].SeparateOutputs {
+		t.Fatalf("capture-only browser has separate outputs: %+v", v.Apps)
+	}
+	v = Build(pulse.Snapshot{}, Config{Routes: []Route{{App: "org.mozilla.firefox", Name: "Firefox", Direction: RouteOutput, Device: hdmiSink}}})
+	if len(v.Apps) != 1 || v.Apps[0].SeparateOutputs {
+		t.Fatalf("saved-only browser has separate outputs: %+v", v.Apps)
 	}
 }
 

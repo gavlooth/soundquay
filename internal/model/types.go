@@ -38,12 +38,13 @@ type AppStream struct {
 
 // App groups the live streams that share an app key, plus saved routes.
 type App struct {
-	Key      string
-	Name     string // display name
-	Routable bool   // false for keys without application identity ("node:<name>"); routes cannot be saved
-	Running  bool   // has at least one live stream
-	Outputs  []AppStream
-	Inputs   []AppStream
+	Key             string
+	Name            string // display name
+	Routable        bool   // false for keys without application identity ("node:<name>"); routes cannot be saved
+	Running         bool   // has at least one live stream
+	Outputs         []AppStream
+	Inputs          []AppStream
+	SeparateOutputs bool // supported browser with live playback streams
 	// OutputRoute / InputRoute are the saved device names; "" means follow the default device.
 	OutputRoute string
 	InputRoute  string

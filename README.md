@@ -70,6 +70,23 @@ no idle polling. Slider writes wait 50 ms after the latest value. Snapshot value
 do not replace an active drag or a slider edit made in the previous second.
 Command errors appear as one line at the bottom of the mixer and on stderr.
 
+### Browser output streams
+
+Helium, Chrome/Chromium, and Firefox also show an output picker for each live
+playback stream, in the mixer and under **Output streams** in the tray menu.
+Rows show the stream number and its media name when available. These are audio
+streams, not identified browser tabs: a browser may combine audio or expose
+multiple streams for one tab.
+
+Each stream picker shows its actual current device. Picking a device moves only
+that stream; **Default output** sends it to the current default output once.
+These choices are not saved and do not change the browser's saved app route.
+The browser-wide controls still affect all its streams. A recreated stream uses
+the existing app routing rules, not the previous stream's choice.
+
+No browser extension is needed. Closed streams disappear, and a stream's number
+is not a lasting identity.
+
 ## Desktop integration
 
 Edit these files yourself; the application does not modify desktop settings.

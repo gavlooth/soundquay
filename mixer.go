@@ -163,11 +163,59 @@ type appDirectionLine struct {
 	object    fyne.CanvasObject
 }
 
+type appStreamRow struct {
+	label    *widget.Label
+	picker   *widget.Select
+	names    []string
+	labels   []string
+	updating bool
+	object   fyne.CanvasObject
+}
+
+func newAppStreamRow(app string, index uint32, dispatch func(Msg)) *appStreamRow {
+	r := &appStreamRow{label: widget.NewLabel("")}
+	r.label.Wrapping = fyne.TextWrapWord
+	r.picker = widget.NewSelect(nil, func(label string) {
+		if r.updating {
+			return
+		}
+		if i := slices.Index(r.labels, label); i >= 0 {
+			dispatch(ChooseStreamDevice{App: app, Index: index, Device: r.names[i]})
+		}
+	})
+	r.object = container.NewGridWithColumns(2, r.label, r.picker)
+	return r
+}
+
+func outputStreamLabel(stream model.AppStream) string {
+	label := fmt.Sprintf("Output stream #%d", stream.Index)
+	if stream.MediaName != "" {
+		label += " — " + stream.MediaName
+	}
+	return label
+}
+
+func streamChoiceOptions(choices []model.DeviceChoice, selected string) (names, labels []string) {
+	return deviceChoiceOptions(choices, selected, "Default output")
+}
+
+func (r *appStreamRow) update(stream model.AppStream, choices []model.DeviceChoice) {
+	r.updating = true
+	r.label.SetText(outputStreamLabel(stream))
+	r.names, r.labels = streamChoiceOptions(choices, stream.DeviceName)
+	selectName(r.picker, r.names, r.labels, stream.DeviceName)
+	r.updating = false
+}
+
 type appRow struct {
 	key           string
 	name          *widget.Label
 	output, input *appDirectionLine
 	saved         *widget.Label
+	outputStreams map[uint32]*appStreamRow
+	streamKeys    []uint32
+	streamList    *fyne.Container
+	dispatch      func(Msg)
 	object        fyne.CanvasObject
 	updating      bool
 }
@@ -201,16 +249,21 @@ func newAppDirectionLine(r *appRow, direction pulse.Direction, dispatch func(Msg
 }
 
 func newAppRow(key string, dispatch func(Msg)) *appRow {
-	r := &appRow{key: key, name: widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}), saved: widget.NewLabel("saved")}
+	r := &appRow{key: key, name: widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}), saved: widget.NewLabel("saved"), outputStreams: make(map[uint32]*appStreamRow), streamList: container.NewVBox(), dispatch: dispatch}
 	r.saved.Importance = widget.HighImportance
 	r.output = newAppDirectionLine(r, pulse.Output, dispatch)
 	r.input = newAppDirectionLine(r, pulse.Input, dispatch)
-	r.object = card(container.NewBorder(nil, nil, nil, r.saved, r.name), r.output.object, r.input.object)
+	r.streamList.Hide()
+	r.object = card(container.NewBorder(nil, nil, nil, r.saved, r.name), r.output.object, r.input.object, r.streamList)
 	return r
 }
 func choiceOptions(choices []model.DeviceChoice, selected string) (names, labels []string) {
+	return deviceChoiceOptions(choices, selected, "Follow default")
+}
+
+func deviceChoiceOptions(choices []model.DeviceChoice, selected, defaultLabel string) (names, labels []string) {
 	names = []string{""}
-	labels = []string{"Follow default"}
+	labels = []string{defaultLabel}
 	counts := map[string]int{}
 	for _, choice := range choices {
 		counts[choice.Label]++
@@ -218,7 +271,7 @@ func choiceOptions(choices []model.DeviceChoice, selected string) (names, labels
 	for _, choice := range choices {
 		names = append(names, choice.Name)
 		label := choice.Label
-		if counts[label] > 1 || label == "Follow default" {
+		if counts[label] > 1 || label == defaultLabel {
 			label += " [" + choice.Name + "]"
 		}
 		labels = append(labels, label)
@@ -298,6 +351,7 @@ func (r *appRow) update(a model.App, v model.View) {
 	r.name.SetText(a.Name)
 	r.output.update(a.Outputs, v.OutputDevices, a.OutputRoute, v.DefaultOutput, a.Routable)
 	r.input.update(a.Inputs, v.InputDevices, a.InputRoute, v.DefaultInput, a.Routable)
+	r.updateStreams(a, v.OutputDevices)
 	if a.OutputRoute != "" || a.InputRoute != "" {
 		r.saved.SetText("saved")
 		r.saved.Show()
@@ -305,6 +359,46 @@ func (r *appRow) update(a model.App, v model.View) {
 		r.saved.Hide()
 	}
 	r.updating = false
+}
+
+func (r *appRow) updateStreams(a model.App, choices []model.DeviceChoice) {
+	streams := a.Outputs
+	if !a.SeparateOutputs {
+		streams = nil
+	}
+	changed := len(streams) != len(r.streamKeys)
+	for i, stream := range streams {
+		if !changed && r.streamKeys[i] != stream.Index {
+			changed = true
+		}
+		row := r.outputStreams[stream.Index]
+		if row == nil {
+			row = newAppStreamRow(r.key, stream.Index, r.dispatch)
+			r.outputStreams[stream.Index] = row
+		}
+		row.update(stream, choices)
+	}
+	if !changed {
+		return
+	}
+	r.streamKeys = make([]uint32, 0, len(streams))
+	objects := make([]fyne.CanvasObject, 0, len(streams))
+	for _, stream := range streams {
+		r.streamKeys = append(r.streamKeys, stream.Index)
+		objects = append(objects, r.outputStreams[stream.Index].object)
+	}
+	r.streamList.Objects = objects
+	r.streamList.Refresh()
+	for index := range r.outputStreams {
+		if !slices.Contains(r.streamKeys, index) {
+			delete(r.outputStreams, index)
+		}
+	}
+	if len(streams) == 0 {
+		r.streamList.Hide()
+	} else {
+		r.streamList.Show()
+	}
 }
 
 type savedRouteRow struct {

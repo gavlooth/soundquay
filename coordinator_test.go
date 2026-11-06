@@ -289,6 +289,147 @@ func TestAppChoiceSavesRouteAndMovesItsOutputStreams(t *testing.T) {
 		t.Fatalf("input calls %v", fake.calls)
 	}
 }
+
+func TestStreamChoiceMovesOnlyItsOutputAndKeepsSavedRoutes(t *testing.T) {
+	for _, target := range []string{"headphones", ""} {
+		t.Run("device="+target, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "config.json")
+			cfg := model.Config{Version: model.ConfigVersion, HiddenDevices: []string{"headphones"}, Nicknames: map[string]string{"speakers": "Desk"}}.
+				WithRoute("chrome", "Chrome", model.RouteOutput, "speakers").
+				WithRoute("chrome", "Chrome", model.RouteInput, "mic")
+			if err := model.SaveConfig(path, cfg); err != nil {
+				t.Fatal(err)
+			}
+			fake := &fakeAudio{}
+			c := newCoordinator(fake, path, cfg, nil)
+			c.save = func(string, model.Config) error {
+				t.Fatal("stream choice must not save preferences")
+				return nil
+			}
+			s := appSnapshot()
+			s.Sinks = append(s.Sinks, pulse.Device{Index: 4, Name: "headphones"})
+			s.Outputs[0].DeviceIndex, s.Outputs[1].DeviceIndex = 2, 2
+			c.handle(context.Background(), SnapshotReady{Snapshot: s})
+			executePending(t, c)
+			fake.calls = nil
+			c.lastError = "earlier failure"
+			c.handle(context.Background(), ChooseStreamDevice{App: "chrome", Index: 10, Device: target})
+			executePending(t, c)
+			device := target
+			if device == "" {
+				device = "default"
+			}
+			if want := []string{"move:0:10:" + device}; !reflect.DeepEqual(fake.calls, want) {
+				t.Fatalf("calls %v, want %v; sibling playback and capture must stay", fake.calls, want)
+			}
+			if c.lastError != "" {
+				t.Fatalf("stream choice kept error %q", c.lastError)
+			}
+			saved, err := model.LoadConfig(path)
+			if err != nil || !reflect.DeepEqual(saved, cfg) || !reflect.DeepEqual(c.config, cfg) {
+				t.Fatalf("stream choice changed preferences: saved %+v, live %+v, err %v", saved, c.config, err)
+			}
+			fake.calls = nil
+			s.Outputs[0].DeviceIndex = 4
+			if target == "" {
+				s.Outputs[0].DeviceIndex = 1
+			}
+			c.handle(context.Background(), SnapshotReady{Snapshot: s})
+			executePending(t, c)
+			s.Info.DefaultSinkName = "headphones"
+			c.handle(context.Background(), SnapshotReady{Snapshot: s})
+			executePending(t, c)
+			if len(fake.calls) != 0 {
+				t.Fatalf("live choice reapplied a saved route or followed a later default: %v", fake.calls)
+			}
+		})
+	}
+}
+
+func TestStreamChoiceIgnoresStaleAppAndOutputIndexes(t *testing.T) {
+	tests := []struct {
+		name   string
+		app    string
+		index  uint32
+		change func(*pulse.Snapshot)
+	}{
+		{name: "missing app", app: "gone", index: 10},
+		{name: "missing output", app: "chrome", index: 99},
+		{name: "capture index", app: "chrome", index: 13},
+		{name: "other app output", app: "chrome", index: 12},
+		{name: "removed output", app: "chrome", index: 10, change: func(s *pulse.Snapshot) { s.Outputs = s.Outputs[1:] }},
+		{name: "index now belongs to another app", app: "chrome", index: 10, change: func(s *pulse.Snapshot) {
+			s.Outputs[0].Properties = map[string]string{"application.process.binary": "spotify"}
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fake := &fakeAudio{}
+			c := newCoordinator(fake, "", model.Config{Version: model.ConfigVersion}, nil)
+			c.save = func(string, model.Config) error {
+				t.Fatal("stale stream choice must not save preferences")
+				return nil
+			}
+			s := appSnapshot()
+			c.handle(context.Background(), SnapshotReady{Snapshot: s})
+			if tt.change != nil {
+				tt.change(&s)
+				c.handle(context.Background(), SnapshotReady{Snapshot: s})
+			}
+			c.lastError = "previous failure"
+			c.handle(context.Background(), ChooseStreamDevice{App: tt.app, Index: tt.index, Device: "speakers"})
+			executePending(t, c)
+			if len(fake.calls) != 0 || c.lastError != "previous failure" {
+				t.Fatalf("stale choice changed audio or error: calls %v, error %q", fake.calls, c.lastError)
+			}
+		})
+	}
+}
+
+func TestStreamChoiceWithoutDefaultReportsError(t *testing.T) {
+	fake := &fakeAudio{}
+	c := newCoordinator(fake, "", model.Config{Version: model.ConfigVersion}, nil)
+	s := appSnapshot()
+	s.Info.DefaultSinkName = ""
+	c.handle(context.Background(), SnapshotReady{Snapshot: s})
+	c.handle(context.Background(), ChooseStreamDevice{App: "chrome", Index: 10})
+	executePending(t, c)
+	if len(fake.calls) != 0 || c.lastError != "Move stream: no default device" || len(c.config.Routes) != 0 {
+		t.Fatalf("missing default: calls %v, error %q, routes %v", fake.calls, c.lastError, c.config.Routes)
+	}
+}
+
+func TestStreamChoiceUsesDefaultAtMessageTime(t *testing.T) {
+	fake := &fakeAudio{}
+	c := newCoordinator(fake, "", model.Config{Version: model.ConfigVersion}, nil)
+	s := appSnapshot()
+	c.handle(context.Background(), SnapshotReady{Snapshot: s})
+	choice := ChooseStreamDevice{App: "chrome", Index: 11}
+	s.Info.DefaultSinkName = "speakers"
+	c.handle(context.Background(), SnapshotReady{Snapshot: s})
+	c.handle(context.Background(), choice)
+	executePending(t, c)
+	if want := []string{"move:0:11:speakers"}; !reflect.DeepEqual(fake.calls, want) {
+		t.Fatalf("calls %v, want current default %v", fake.calls, want)
+	}
+}
+
+func TestStreamMoveFailureReportsErrorWithoutChangingRoute(t *testing.T) {
+	fake := &fakeAudio{failures: map[string]error{"move:0:10:speakers": errors.New("stream disappeared")}}
+	cfg := model.Config{Version: model.ConfigVersion}.WithRoute("chrome", "Chrome", model.RouteOutput, "default")
+	c := newCoordinator(fake, "", cfg, nil)
+	c.handle(context.Background(), SnapshotReady{Snapshot: appSnapshot()})
+	c.handle(context.Background(), ChooseStreamDevice{App: "chrome", Index: 10, Device: "speakers"})
+	for _, cmd := range c.commands.take() {
+		if cmd.routeMove != nil {
+			t.Fatal("live stream move became a saved-route move")
+		}
+		c.handle(context.Background(), WriteDone{Op: cmd.op, Err: cmd.run(context.Background()), RouteMove: cmd.routeMove})
+	}
+	if !strings.Contains(c.lastError, "stream disappeared") || !reflect.DeepEqual(c.config, cfg) {
+		t.Fatalf("failed stream move: error %q, config %+v", c.lastError, c.config)
+	}
+}
 func TestDeletingRouteOfRunningAppMovesItsStreamsToDefault(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.json")
 	fake := &fakeAudio{}
